@@ -191,6 +191,26 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
     }
   }
 
+  const handleBook = async (roomType: 'single' | 'double') => {
+    if (!user) return;
+    try {
+      const res = await fetch(`/api/bookings/initiate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mess_group_id: messGroup?.id,
+          room_type: roomType,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url; // Redirect to Stripe checkout
+      }
+    } catch (err) {
+      alert('Booking initiation failed.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
@@ -347,6 +367,13 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                       <Users className="w-4 h-4 text-blue-600 mr-2" />
                       <span className="text-blue-700">{messGroup.single_seats} seats available</span>
                     </div>
+                    <Button
+                      className="mt-4 w-full"
+                      disabled={messGroup.single_seats < 1}
+                      onClick={() => handleBook('single')}
+                    >
+                      Book Single Room
+                    </Button>
                   </div>
 
                   <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 p-6 rounded-xl">
@@ -360,6 +387,13 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                       <Users className="w-4 h-4 text-emerald-600 mr-2" />
                       <span className="text-emerald-700">{messGroup.double_seats} seats available</span>
                     </div>
+                    <Button
+                      className="mt-4 w-full"
+                      disabled={messGroup.double_seats < 1}
+                      onClick={() => handleBook('double')}
+                    >
+                      Book Double Room
+                    </Button>
                   </div>
                 </div>
               </CardContent>
