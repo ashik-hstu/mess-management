@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud } from "lucide-react"
+import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus } from "lucide-react"
 
 const locations = [
   {
@@ -95,7 +95,31 @@ const features = [
   },
 ]
 
-export default function HomePage() {
+  // Simple mobile menu for homepage
+  function MobileMenu() {
+    const [open, setOpen] = useState(false)
+    return (
+      <div className="relative">
+        <Button variant="outline" size="icon" onClick={() => setOpen(open => !open)} aria-label="Open menu">
+          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </Button>
+        {open && (
+          <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+            <Link href="/owner/login">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+                <UserPlus className="w-4 h-4 mr-2" /> Owner Login
+              </Button>
+            </Link>
+            <Link href="/owner/signup">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+                List Your Mess
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    )
+  }
   // PWA install prompt logic
   const [deferredPrompt, setDeferredPrompt] = useState(null)
   const [showInstall, setShowInstall] = useState(false)
@@ -129,11 +153,14 @@ export default function HomePage() {
       <nav className="bg-white/80 backdrop-blur-sm border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
+            {/* Logo and title: compact on mobile, full on desktop */}
             <div className="flex items-center space-x-2">
               <Building2 className="w-8 h-8 text-orange-600" />
-              <span className="text-2xl font-bold text-slate-800">HSTU Mess Finder</span>
+              <span className="hidden sm:inline text-2xl font-bold text-slate-800">HSTU Mess Finder</span>
+              <span className="sm:hidden text-lg font-bold text-slate-800">Mess Finder</span>
             </div>
-            <div className="flex items-center gap-4">
+            {/* Desktop nav */}
+            <div className="hidden sm:flex items-center gap-4">
               <Link href="/owner/login">
                 <Button variant="outline" size="sm">
                   Owner Login
@@ -148,9 +175,41 @@ export default function HomePage() {
                 </Button>
               </Link>
             </div>
+            {/* Mobile nav */}
+            <div className="sm:hidden">
+              <MobileMenu />
+            </div>
           </div>
         </div>
       </nav>
+// Simple mobile menu for homepage
+import { useState } from "react"
+import { Menu, X, UserPlus } from "lucide-react"
+
+function MobileMenu() {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <Button variant="outline" size="icon" onClick={() => setOpen(open => !open)} aria-label="Open menu">
+        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </Button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+          <Link href="/owner/login">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+              <UserPlus className="w-4 h-4 mr-2" /> Owner Login
+            </Button>
+          </Link>
+          <Link href="/owner/signup">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+              List Your Mess
+            </Button>
+          </Link>
+        </div>
+      )}
+    </div>
+  )
+}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
