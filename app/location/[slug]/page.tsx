@@ -23,6 +23,7 @@ import {
   Building2,
   Loader2,
   AlertCircle,
+  RefreshCw,
 } from "lucide-react"
 
 // Location data mapping
@@ -119,6 +120,7 @@ export default function LocationPage({ params }: LocationPageProps) {
   const [hasFilters, setHasFilters] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [retryCount, setRetryCount] = useState(0)
 
   const locationData = messData[slug as keyof typeof messData] || {
     title: "Mess Accommodation",
@@ -133,7 +135,7 @@ export default function LocationPage({ params }: LocationPageProps) {
     if (locationData.location && locationData.category) {
       fetchMessGroups()
     }
-  }, [slug, locationData.location, locationData.category])
+  }, [slug, locationData.location, locationData.category, retryCount])
 
   const fetchMessGroups = async () => {
     try {
@@ -144,10 +146,14 @@ export default function LocationPage({ params }: LocationPageProps) {
         location: locationData.location,
         category: locationData.category,
         slug,
+        attempt: retryCount + 1,
       })
 
       const url = `/api/mess-groups?location=${encodeURIComponent(locationData.location)}&category=${encodeURIComponent(locationData.category)}`
       console.log("Frontend: Fetching from URL:", url)
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 second timeout
 
       const response = await fetch(url, {
         method: "GET",
@@ -155,19 +161,24 @@ export default function LocationPage({ params }: LocationPageProps) {
           "Content-Type": "application/json",
           Accept: "application/json",
         },
+        signal: controller.signal,
       })
 
-      console.log("Frontend: Response status:", response.status)
-      console.log("Frontend: Response content-type:", response.headers.get("content-type"))
+      clearTimeout(timeoutId)
 
-      // Get the response text first to debug
+      console.log("Frontend: Response status:", response.status)
+      console.log("Frontend: Response headers:", Object.fromEntries(response.headers.entries()))
+
+      // Always try to get response as text first for debugging
       const responseText = await response.text()
-      console.log("Frontend: Raw response (first 200 chars):", responseText.substring(0, 200))
+      console.log("Frontend: Raw response (first 500 chars):", responseText.substring(0, 500))
 
       // Check if response is JSON
-      if (!response.headers.get("content-type")?.includes("application/json")) {
+      const contentType = response.headers.get("content-type")
+      if (!contentType?.includes("application/json")) {
+        console.error("Frontend: Non-JSON response received")
         throw new Error(
-          `Expected JSON response but got: ${response.headers.get("content-type")}. Response: ${responseText.substring(0, 100)}`,
+          `Server returned ${contentType} instead of JSON. This usually indicates a server error. Response: ${responseText.substring(0, 200)}`,
         )
       }
 
@@ -177,7 +188,7 @@ export default function LocationPage({ params }: LocationPageProps) {
         data = JSON.parse(responseText)
       } catch (parseError) {
         console.error("Frontend: JSON parse error:", parseError)
-        throw new Error(`Invalid JSON response. Response was: ${responseText.substring(0, 200)}`)
+        throw new Error(`Invalid JSON response from server. Raw response: ${responseText.substring(0, 200)}`)
       }
 
       console.log("Frontend: Parsed data:", data)
@@ -186,14 +197,35 @@ export default function LocationPage({ params }: LocationPageProps) {
         throw new Error(data.details || data.error || "Failed to fetch mess groups")
       }
 
-      setMessGroups(data.messGroups || [])
-      setFilteredMesses(data.messGroups || [])
+      const messGroupsData = data.messGroups || []
+      console.log("Frontend: Received mess groups:", messGroupsData.length)
+
+      setMessGroups(messGroupsData)
+      setFilteredMesses(messGroupsData)
+      setRetryCount(0) // Reset retry count on success
     } catch (error: any) {
       console.error("Frontend: Error fetching mess groups:", error)
-      setError(error.message || "Failed to load mess groups")
+
+      let errorMessage = "Failed to load mess groups"
+
+      if (error.name === "AbortError") {
+        errorMessage = "Request timed out. Please check your connection and try again."
+      } else if (error.message.includes("JSON")) {
+        errorMessage = "Server error: Unable to process the response. Please try again."
+      } else if (error.message.includes("fetch")) {
+        errorMessage = "Network error: Unable to connect to the server. Please check your connection."
+      } else {
+        errorMessage = error.message || errorMessage
+      }
+
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleRetry = () => {
+    setRetryCount((prev) => prev + 1)
   }
 
   const searchSingleSeat = () => {
@@ -246,6 +278,7 @@ export default function LocationPage({ params }: LocationPageProps) {
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
           <p className="text-slate-600">Loading mess groups...</p>
+          <p className="text-sm text-slate-500 mt-2">{retryCount > 0 && `Attempt ${retryCount + 1}`}</p>
         </div>
       </div>
     )
@@ -306,19 +339,30 @@ export default function LocationPage({ params }: LocationPageProps) {
       <div className="container mx-auto px-4 py-12">
         {/* Error Display */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
-            <div>
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
               <p className="text-red-700 font-medium">Error loading mess groups</p>
-              <p className="text-red-600 text-sm">{error}</p>
-              <Button
-                onClick={fetchMessGroups}
-                variant="outline"
-                size="sm"
-                className="mt-2 border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
-              >
-                Try Again
-              </Button>
+              <p className="text-red-600 text-sm mt-1">{error}</p>
+              <div className="flex gap-2 mt-3">
+                <Button
+                  onClick={handleRetry}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  variant="outline"
+                  size="sm"
+                  className="border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
+                >
+                  Reload Page
+                </Button>
+              </div>
             </div>
           </div>
         )}
@@ -327,230 +371,233 @@ export default function LocationPage({ params }: LocationPageProps) {
         {process.env.NODE_ENV === "development" && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-medium text-blue-800 mb-2">Debug Info:</h3>
-            <p className="text-sm text-blue-700">Slug: {slug}</p>
-            <p className="text-sm text-blue-700">Location: {locationData.location}</p>
-            <p className="text-sm text-blue-700">Category: {locationData.category}</p>
-            <p className="text-sm text-blue-700">Mess Groups Found: {messGroups.length}</p>
+            <div className="text-sm text-blue-700 space-y-1">
+              <p>Slug: {slug}</p>
+              <p>Location: {locationData.location}</p>
+              <p>Category: {locationData.category}</p>
+              <p>Mess Groups Found: {messGroups.length}</p>
+              <p>Retry Count: {retryCount}</p>
+              <p>Has Error: {error ? "Yes" : "No"}</p>
+            </div>
           </div>
         )}
 
         {/* Search Section */}
-        <Card className="mb-8 border-0 shadow-xl">
-          <CardHeader>
-            <CardTitle className="flex items-center text-2xl">
-              <Filter className="w-6 h-6 mr-3" />
-              Filter by Price Range
-            </CardTitle>
-            <CardDescription>Find mess services that fit your budget by setting maximum price limits</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <Label htmlFor="singlePrice" className="text-base font-medium">
-                  Single Seat Maximum Price
-                </Label>
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      id="singlePrice"
-                      type="number"
-                      placeholder="e.g., 1500"
-                      value={singlePriceFilter}
-                      onChange={(e) => setSinglePriceFilter(e.target.value)}
-                      className="pl-10 h-12"
-                    />
+        {!error && (
+          <Card className="mb-8 border-0 shadow-xl">
+            <CardHeader>
+              <CardTitle className="flex items-center text-2xl">
+                <Filter className="w-6 h-6 mr-3" />
+                Filter by Price Range
+              </CardTitle>
+              <CardDescription>Find mess services that fit your budget by setting maximum price limits</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <Label htmlFor="singlePrice" className="text-base font-medium">
+                    Single Seat Maximum Price
+                  </Label>
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="singlePrice"
+                        type="number"
+                        placeholder="e.g., 1500"
+                        value={singlePriceFilter}
+                        onChange={(e) => setSinglePriceFilter(e.target.value)}
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                    <Button
+                      onClick={searchSingleSeat}
+                      className={`bg-gradient-to-r ${colors.button} text-white px-6 h-12 shadow-lg hover:shadow-xl transition-all duration-300`}
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Search
+                    </Button>
                   </div>
-                  <Button
-                    onClick={searchSingleSeat}
-                    className={`bg-gradient-to-r ${colors.button} text-white px-6 h-12 shadow-lg hover:shadow-xl transition-all duration-300`}
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
-                  </Button>
+                </div>
+
+                <div className="space-y-4">
+                  <Label htmlFor="doublePrice" className="text-base font-medium">
+                    Double Seat Maximum Price
+                  </Label>
+                  <div className="flex gap-3">
+                    <div className="relative flex-1">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        id="doublePrice"
+                        type="number"
+                        placeholder="e.g., 1200"
+                        value={doublePriceFilter}
+                        onChange={(e) => setDoublePriceFilter(e.target.value)}
+                        className="pl-10 h-12"
+                      />
+                    </div>
+                    <Button
+                      onClick={searchDoubleSeat}
+                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 h-12 shadow-lg hover:shadow-xl transition-all duration-300"
+                    >
+                      <Search className="w-4 h-4 mr-2" />
+                      Search
+                    </Button>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label htmlFor="doublePrice" className="text-base font-medium">
-                  Double Seat Maximum Price
-                </Label>
-                <div className="flex gap-3">
-                  <div className="relative flex-1">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <Input
-                      id="doublePrice"
-                      type="number"
-                      placeholder="e.g., 1200"
-                      value={doublePriceFilter}
-                      onChange={(e) => setDoublePriceFilter(e.target.value)}
-                      className="pl-10 h-12"
-                    />
-                  </div>
-                  <Button
-                    onClick={searchDoubleSeat}
-                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-6 h-12 shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    <Search className="w-4 h-4 mr-2" />
-                    Search
+              {hasFilters && (
+                <div className="mt-6 flex items-center gap-4">
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                    Filters Applied
+                  </Badge>
+                  <Button variant="outline" onClick={resetFilters} size="sm">
+                    <X className="w-4 h-4 mr-2" />
+                    Clear All Filters
                   </Button>
                 </div>
-              </div>
-            </div>
-
-            {hasFilters && (
-              <div className="mt-6 flex items-center gap-4">
-                <Badge variant="secondary" className="bg-slate-100 text-slate-700">
-                  Filters Applied
-                </Badge>
-                <Button variant="outline" onClick={resetFilters} size="sm">
-                  <X className="w-4 h-4 mr-2" />
-                  Clear All Filters
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Results Summary */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-slate-800 mb-2">
-            {hasFilters
-              ? `Filtered Results (${filteredMesses.length})`
-              : `All Available Options (${filteredMesses.length})`}
-          </h2>
-          <p className="text-slate-600">
-            {hasFilters
-              ? "Showing mess services matching your price criteria"
-              : "Browse all available mess services in this area"}
-          </p>
-        </div>
+        {!error && (
+          <div className="mb-6">
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">
+              {hasFilters
+                ? `Filtered Results (${filteredMesses.length})`
+                : `All Available Options (${filteredMesses.length})`}
+            </h2>
+            <p className="text-slate-600">
+              {hasFilters
+                ? "Showing mess services matching your price criteria"
+                : "Browse all available mess services in this area"}
+            </p>
+          </div>
+        )}
 
         {/* Mess Table */}
-        <Card className="border-0 shadow-xl overflow-hidden">
-          <CardContent className="p-0">
-            {filteredMesses.length > 0 ? (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100">
-                      <TableHead className="text-center font-semibold text-slate-700 py-4">
-                        <div className="flex items-center justify-center gap-2">
-                          <Building2 className="w-4 h-4" />
-                          Mess Name
-                        </div>
-                      </TableHead>
-                      <TableHead colSpan={2} className="text-center font-semibold text-slate-700 border-l">
-                        <div className="flex items-center justify-center gap-2">
-                          <Bed className="w-4 h-4" />
-                          Single Seat
-                        </div>
-                      </TableHead>
-                      <TableHead colSpan={2} className="text-center font-semibold text-slate-700 border-l">
-                        <div className="flex items-center justify-center gap-2">
-                          <Users className="w-4 h-4" />
-                          Double Seat
-                        </div>
-                      </TableHead>
-                      <TableHead className="text-center font-semibold text-slate-700 border-l py-4">Details</TableHead>
-                    </TableRow>
-                    <TableRow className="bg-slate-50">
-                      <TableHead className="text-center text-sm text-slate-600 py-2">Rating</TableHead>
-                      <TableHead className="text-center text-sm text-slate-600 border-l">Available</TableHead>
-                      <TableHead className="text-center text-sm text-slate-600">Price</TableHead>
-                      <TableHead className="text-center text-sm text-slate-600 border-l">Available</TableHead>
-                      <TableHead className="text-center text-sm text-slate-600">Price</TableHead>
-                      <TableHead className="text-center text-sm text-slate-600 border-l">Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredMesses.map((mess, index) => (
-                      <TableRow key={mess.id || index} className="hover:bg-slate-50/50 transition-colors">
-                        <TableCell className="font-medium py-6">
-                          <div className="text-center">
-                            <div className="font-semibold text-slate-800 mb-1">{mess.name}</div>
-                            <div className="flex items-center justify-center gap-1">
-                              <div className="flex">
-                                {[...Array(5)].map((_, i) => (
-                                  <div
-                                    key={i}
-                                    className={`w-3 h-3 ${
-                                      i < Math.floor(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
-                                    }`}
-                                  >
-                                    ⭐
-                                  </div>
-                                ))}
-                              </div>
-                              <span className="text-sm text-slate-600 ml-1">{mess.rating || 0}</span>
-                            </div>
+        {!error && (
+          <Card className="border-0 shadow-xl overflow-hidden">
+            <CardContent className="p-0">
+              {filteredMesses.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100">
+                        <TableHead className="text-center font-semibold text-slate-700 py-4">
+                          <div className="flex items-center justify-center gap-2">
+                            <Building2 className="w-4 h-4" />
+                            Mess Name
                           </div>
-                        </TableCell>
-                        <TableCell className="text-center border-l">
-                          <Badge variant="secondary" className="bg-green-100 text-green-700">
-                            {mess.single_seats || 0} seats
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="font-semibold text-lg text-slate-800">৳{mess.single_price || 0}</div>
-                          <div className="text-sm text-slate-500">per month</div>
-                        </TableCell>
-                        <TableCell className="text-center border-l">
-                          <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                            {mess.double_seats || 0} seats
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="font-semibold text-lg text-slate-800">৳{mess.double_price || 0}</div>
-                          <div className="text-sm text-slate-500">per month</div>
-                        </TableCell>
-                        <TableCell className="text-center border-l">
-                          <Link href={`/mess/${mess.id}`}>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="hover:bg-slate-50 transition-colors bg-transparent"
-                            >
-                              <ExternalLink className="w-4 h-4 mr-2" />
-                              View Details
-                            </Button>
-                          </Link>
-                        </TableCell>
+                        </TableHead>
+                        <TableHead colSpan={2} className="text-center font-semibold text-slate-700 border-l">
+                          <div className="flex items-center justify-center gap-2">
+                            <Bed className="w-4 h-4" />
+                            Single Seat
+                          </div>
+                        </TableHead>
+                        <TableHead colSpan={2} className="text-center font-semibold text-slate-700 border-l">
+                          <div className="flex items-center justify-center gap-2">
+                            <Users className="w-4 h-4" />
+                            Double Seat
+                          </div>
+                        </TableHead>
+                        <TableHead className="text-center font-semibold text-slate-700 border-l py-4">
+                          Details
+                        </TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            ) : (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="w-10 h-10 text-slate-400" />
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="text-center text-sm text-slate-600 py-2">Rating</TableHead>
+                        <TableHead className="text-center text-sm text-slate-600 border-l">Available</TableHead>
+                        <TableHead className="text-center text-sm text-slate-600">Price</TableHead>
+                        <TableHead className="text-center text-sm text-slate-600 border-l">Available</TableHead>
+                        <TableHead className="text-center text-sm text-slate-600">Price</TableHead>
+                        <TableHead className="text-center text-sm text-slate-600 border-l">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredMesses.map((mess, index) => (
+                        <TableRow key={mess.id || index} className="hover:bg-slate-50/50 transition-colors">
+                          <TableCell className="font-medium py-6">
+                            <div className="text-center">
+                              <div className="font-semibold text-slate-800 mb-1">{mess.name}</div>
+                              <div className="flex items-center justify-center gap-1">
+                                <div className="flex">
+                                  {[...Array(5)].map((_, i) => (
+                                    <div
+                                      key={i}
+                                      className={`w-3 h-3 ${
+                                        i < Math.floor(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
+                                      }`}
+                                    >
+                                      ⭐
+                                    </div>
+                                  ))}
+                                </div>
+                                <span className="text-sm text-slate-600 ml-1">{mess.rating || 0}</span>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center border-l">
+                            <Badge variant="secondary" className="bg-green-100 text-green-700">
+                              {mess.single_seats || 0} seats
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="font-semibold text-lg text-slate-800">৳{mess.single_price || 0}</div>
+                            <div className="text-sm text-slate-500">per month</div>
+                          </TableCell>
+                          <TableCell className="text-center border-l">
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-700">
+                              {mess.double_seats || 0} seats
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="font-semibold text-lg text-slate-800">৳{mess.double_price || 0}</div>
+                            <div className="text-sm text-slate-500">per month</div>
+                          </TableCell>
+                          <TableCell className="text-center border-l">
+                            <Link href={`/mess/${mess.id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="hover:bg-slate-50 transition-colors bg-transparent"
+                              >
+                                <ExternalLink className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                            </Link>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
-                <h3 className="text-xl font-semibold text-slate-800 mb-2">
-                  {error ? "Unable to Load Results" : "No Results Found"}
-                </h3>
-                <p className="text-slate-600 mb-6">
-                  {error
-                    ? "There was an error loading the mess groups. Please try again."
-                    : hasFilters
+              ) : (
+                <div className="text-center py-16">
+                  <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-10 h-10 text-slate-400" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-800 mb-2">No Results Found</h3>
+                  <p className="text-slate-600 mb-6">
+                    {hasFilters
                       ? "No mess services match your current price criteria. Try adjusting your filters."
                       : "No mess services are currently available in this area."}
-                </p>
-                {hasFilters && !error && (
-                  <Button onClick={resetFilters} variant="outline">
-                    <X className="w-4 h-4 mr-2" />
-                    Clear Filters
-                  </Button>
-                )}
-                {error && (
-                  <Button onClick={fetchMessGroups} variant="outline">
-                    Try Again
-                  </Button>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </p>
+                  {hasFilters && (
+                    <Button onClick={resetFilters} variant="outline">
+                      <X className="w-4 h-4 mr-2" />
+                      Clear Filters
+                    </Button>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Footer */}

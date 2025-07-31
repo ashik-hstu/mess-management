@@ -21,26 +21,123 @@ export async function testConnection() {
 // Helper function to get mess groups by location and category
 export async function getMessGroups(location?: string, category?: string) {
   try {
-    let query = "SELECT * FROM mess_groups WHERE is_active = true"
-    const params: any[] = []
-    let paramIndex = 1
-
-    if (location) {
-      query += ` AND location = $${paramIndex}`
-      params.push(location)
-      paramIndex++
+    if (location && category) {
+      const result = await sql`
+        SELECT 
+          mg.id,
+          mg.name,
+          mg.location,
+          mg.category,
+          mg.description,
+          mg.single_seats,
+          mg.single_price,
+          mg.double_seats,
+          mg.double_price,
+          mg.rating,
+          mg.amenities,
+          mg.contact_phone,
+          mg.contact_email,
+          mg.address,
+          mg.is_active,
+          mg.created_at,
+          u.name as owner_name,
+          u.mobile as owner_mobile,
+          u.email as owner_email
+        FROM mess_groups mg
+        LEFT JOIN users u ON mg.owner_id = u.id
+        WHERE mg.is_active = true 
+          AND LOWER(mg.location) = LOWER(${location})
+          AND LOWER(mg.category) = LOWER(${category})
+        ORDER BY mg.rating DESC, mg.created_at DESC
+      `
+      return result
+    } else if (location) {
+      const result = await sql`
+        SELECT 
+          mg.id,
+          mg.name,
+          mg.location,
+          mg.category,
+          mg.description,
+          mg.single_seats,
+          mg.single_price,
+          mg.double_seats,
+          mg.double_price,
+          mg.rating,
+          mg.amenities,
+          mg.contact_phone,
+          mg.contact_email,
+          mg.address,
+          mg.is_active,
+          mg.created_at,
+          u.name as owner_name,
+          u.mobile as owner_mobile,
+          u.email as owner_email
+        FROM mess_groups mg
+        LEFT JOIN users u ON mg.owner_id = u.id
+        WHERE mg.is_active = true 
+          AND LOWER(mg.location) = LOWER(${location})
+        ORDER BY mg.rating DESC, mg.created_at DESC
+      `
+      return result
+    } else if (category) {
+      const result = await sql`
+        SELECT 
+          mg.id,
+          mg.name,
+          mg.location,
+          mg.category,
+          mg.description,
+          mg.single_seats,
+          mg.single_price,
+          mg.double_seats,
+          mg.double_price,
+          mg.rating,
+          mg.amenities,
+          mg.contact_phone,
+          mg.contact_email,
+          mg.address,
+          mg.is_active,
+          mg.created_at,
+          u.name as owner_name,
+          u.mobile as owner_mobile,
+          u.email as owner_email
+        FROM mess_groups mg
+        LEFT JOIN users u ON mg.owner_id = u.id
+        WHERE mg.is_active = true 
+          AND LOWER(mg.category) = LOWER(${category})
+        ORDER BY mg.rating DESC, mg.created_at DESC
+      `
+      return result
+    } else {
+      const result = await sql`
+        SELECT 
+          mg.id,
+          mg.name,
+          mg.location,
+          mg.category,
+          mg.description,
+          mg.single_seats,
+          mg.single_price,
+          mg.double_seats,
+          mg.double_price,
+          mg.rating,
+          mg.amenities,
+          mg.contact_phone,
+          mg.contact_email,
+          mg.address,
+          mg.is_active,
+          mg.created_at,
+          u.name as owner_name,
+          u.mobile as owner_mobile,
+          u.email as owner_email
+        FROM mess_groups mg
+        LEFT JOIN users u ON mg.owner_id = u.id
+        WHERE mg.is_active = true
+        ORDER BY mg.rating DESC, mg.created_at DESC
+      `
+      return result
     }
-
-    if (category) {
-      query += ` AND category = $${paramIndex}`
-      params.push(category)
-      paramIndex++
-    }
-
-    query += " ORDER BY rating DESC, created_at DESC"
-
-    const result = await sql(query, params)
-    return result
   } catch (error) {
     console.error("Error fetching mess groups:", error)
     throw error
