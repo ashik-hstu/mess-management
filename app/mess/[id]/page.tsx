@@ -22,6 +22,8 @@ import {
   Zap,
   Loader2,
   AlertCircle,
+  Menu,
+  X,
 } from "lucide-react"
 
 interface MessGroup {
@@ -66,6 +68,31 @@ const amenityIcons: { [key: string]: any } = {
 }
 
 export default function MessDetailPage({ params }: MessDetailPageProps) {
+  // Responsive mobile menu for navigation
+  function MobileMenu() {
+    const [open, setOpen] = useState(false)
+    return (
+      <div className="relative">
+        <Button variant="outline" size="icon" onClick={() => setOpen(open => !open)} aria-label="Open menu">
+          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </Button>
+        {open && (
+          <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+            <Link href="/">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+                <Home className="w-4 h-4 mr-2" /> Home
+              </Button>
+            </Link>
+            <Link href="/owner/login">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+                Owner Login
+              </Button>
+            </Link>
+          </div>
+        )}
+      </div>
+    )
+  }
   const { id } = params
   const [messGroup, setMessGroup] = useState<MessGroup | null>(null)
   const [loading, setLoading] = useState(true)
@@ -189,7 +216,8 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
             <Link href="/" className="text-2xl font-bold text-slate-800">
               HSTU Mess Finder
             </Link>
-            <div className="flex items-center gap-4">
+            {/* Desktop nav */}
+            <div className="hidden sm:flex items-center gap-4">
               <Link href="/">
                 <Button variant="outline" size="sm">
                   <Home className="w-4 h-4 mr-2" />
@@ -201,6 +229,10 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                   Owner Login
                 </Button>
               </Link>
+            </div>
+            {/* Mobile nav */}
+            <div className="sm:hidden">
+              <MobileMenu />
             </div>
           </div>
         </div>
