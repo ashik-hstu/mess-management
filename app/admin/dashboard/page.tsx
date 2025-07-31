@@ -108,7 +108,7 @@ export default function AdminDashboard() {
         throw new Error(data.error || "Failed to fetch mess groups")
       }
 
-      setMessGroups(data.messGroups || [])
+      setMessGroups(data.data || [])
     } catch (error: any) {
       console.error("Dashboard: Error fetching mess groups:", error)
       setError(error.message || "Failed to load mess groups")
