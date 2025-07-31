@@ -2,11 +2,12 @@
 
 import Link from "next/link"
 import Image from "next/image"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart } from "lucide-react"
+import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud } from "lucide-react"
 
 const locations = [
   {
@@ -95,6 +96,33 @@ const features = [
 ]
 
 export default function HomePage() {
+  // PWA install prompt logic
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [showInstall, setShowInstall] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    // Register service worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+    }
+    // Listen for install prompt
+    const handler = (e) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+      setShowInstall(true)
+    }
+    window.addEventListener("beforeinstallprompt", handler)
+    return () => window.removeEventListener("beforeinstallprompt", handler)
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === "accepted") setShowInstall(false)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Navigation */}
@@ -137,7 +165,7 @@ export default function HomePage() {
               Discover comfortable, affordable, and safe accommodation options near HSTU campus. Connect with verified
               mess owners and find your home away from home.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
               <Button
                 size="lg"
                 className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
@@ -153,6 +181,28 @@ export default function HomePage() {
                 <Phone className="w-5 h-5 mr-2" />
                 Contact Support
               </Button>
+            </div>
+            {/* PWA Install Info and Button */}
+            <div className="max-w-2xl mx-auto bg-white/80 rounded-xl shadow-lg p-6 border border-orange-100 mb-4 flex flex-col items-center">
+              <div className="flex items-center gap-3 mb-2">
+                <DownloadCloud className="w-8 h-8 text-orange-600" />
+                <span className="text-xl font-semibold text-slate-800">Install as App</span>
+              </div>
+              <p className="text-slate-600 mb-4 text-center">
+                Enjoy lightning-fast access, offline support, and a native app experience. Install HSTU Mess Finder on your device for the best experience!
+              </p>
+              {showInstall && (
+                <Button
+                  size="lg"
+                  className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
+                  onClick={handleInstallClick}
+                >
+                  <DownloadCloud className="w-5 h-5 mr-2" /> Install App
+                </Button>
+              )}
+              {!showInstall && (
+                <span className="text-sm text-slate-500">Already installed or not supported on this device.</span>
+              )}
             </div>
           </div>
         </div>

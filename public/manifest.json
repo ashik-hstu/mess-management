@@ -1,0 +1,21 @@
+{
+  "name": "HSTU Mess Finder",
+  "short_name": "MessFinder",
+  "description": "Find and manage mess accommodations near HSTU campus.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#ea580c",
+  "icons": [
+    {
+      "src": "/images/placeholder-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/placeholder-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
