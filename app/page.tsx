@@ -95,6 +95,13 @@ const features = [
   },
 ]
 
+
+  // --- Types for PWA install event ---
+  type BeforeInstallPromptEvent = Event & {
+    prompt: () => Promise<void>
+    userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
+  }
+  
   // Simple mobile menu for homepage
   function MobileMenu() {
     const [open, setOpen] = useState(false)
@@ -120,35 +127,37 @@ const features = [
       </div>
     )
   }
-  // PWA install prompt logic
-  const [deferredPrompt, setDeferredPrompt] = useState(null)
-  const [showInstall, setShowInstall] = useState(false)
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    // Register service worker
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js")
+  
+  // Main page component
+  export default function HomePage() {
+    const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+    const [showInstall, setShowInstall] = useState(false)
+  
+    useEffect(() => {
+      if (typeof window === "undefined") return
+      // Register service worker
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/service-worker.js")
+      }
+      // Listen for install prompt
+      const handler = (e: Event) => {
+        e.preventDefault()
+        setDeferredPrompt(e as BeforeInstallPromptEvent)
+        setShowInstall(true)
+      }
+      window.addEventListener("beforeinstallprompt", handler)
+      return () => window.removeEventListener("beforeinstallprompt", handler)
+    }, [])
+  
+    const handleInstallClick = async () => {
+      if (!deferredPrompt) return
+      await deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === "accepted") setShowInstall(false)
     }
-    // Listen for install prompt
-    const handler = (e) => {
-      e.preventDefault()
-      setDeferredPrompt(e)
-      setShowInstall(true)
-    }
-    window.addEventListener("beforeinstallprompt", handler)
-    return () => window.removeEventListener("beforeinstallprompt", handler)
-  }, [])
-
-  const handleInstallClick = async () => {
-    if (!deferredPrompt) return
-    deferredPrompt.prompt()
-    const { outcome } = await deferredPrompt.userChoice
-    if (outcome === "accepted") setShowInstall(false)
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+  
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Navigation */}
       <nav className="bg-white/80 backdrop-blur-sm border-b border-white/20 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
@@ -182,34 +191,6 @@ const features = [
           </div>
         </div>
       </nav>
-// Simple mobile menu for homepage
-import { useState } from "react"
-import { Menu, X, UserPlus } from "lucide-react"
-
-function MobileMenu() {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <Button variant="outline" size="icon" onClick={() => setOpen(open => !open)} aria-label="Open menu">
-        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-      </Button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
-          <Link href="/owner/login">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-              <UserPlus className="w-4 h-4 mr-2" /> Owner Login
-            </Button>
-          </Link>
-          <Link href="/owner/signup">
-            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-              List Your Mess
-            </Button>
-          </Link>
-        </div>
-      )}
-    </div>
-  )
-}
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
