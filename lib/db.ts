@@ -1,3 +1,17 @@
+// Helper function to get all users (admin only)
+export async function getAllUsers() {
+  try {
+    const result = await sql`
+      SELECT id, name, email, mobile, role, is_approved
+      FROM users
+      ORDER BY id ASC
+    `
+    return result
+  } catch (error) {
+    console.error("Error fetching users:", error)
+    throw error
+  }
+}
 import { neon } from "@neondatabase/serverless"
 
 if (!process.env.DATABASE_URL) {
