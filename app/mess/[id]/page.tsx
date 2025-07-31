@@ -70,10 +70,37 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
   const [messGroup, setMessGroup] = useState<MessGroup | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [userRating, setUserRating] = useState<number>(0)
+  const [ratingLoading, setRatingLoading] = useState(false)
+  const [ratingError, setRatingError] = useState("")
 
   useEffect(() => {
     fetchMessGroup()
   }, [id])
+  const handleStarClick = (star: number) => {
+    setUserRating(star)
+  }
+
+  const handleRatingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!userRating) return
+    setRatingLoading(true)
+    setRatingError("")
+    try {
+      const res = await fetch(`/api/mess-groups/${id}/rating`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating: userRating }),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || "Failed to update rating")
+      setMessGroup((prev) => prev ? { ...prev, rating: userRating } : prev)
+    } catch (err: any) {
+      setRatingError(err.message || "Failed to update rating")
+    } finally {
+      setRatingLoading(false)
+    }
+  }
 
   const fetchMessGroup = async () => {
     try {
@@ -292,13 +319,20 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-6 h-6 ${
-                          i < Math.floor(messGroup.rating) ? "text-yellow-400 fill-current" : "text-slate-300"
+                        className={`w-6 h-6 cursor-pointer ${
+                          i < (userRating || Math.floor(messGroup.rating)) ? "text-yellow-400 fill-current" : "text-slate-300"
                         }`}
+                        onClick={() => handleStarClick(i + 1)}
                       />
                     ))}
                   </div>
                 </div>
+                <form onSubmit={handleRatingSubmit} className="flex items-center gap-2 mb-2">
+                  <Button type="submit" size="sm" disabled={ratingLoading || !userRating}>
+                    {ratingLoading ? "Saving..." : "Submit Rating"}
+                  </Button>
+                  {ratingError && <span className="text-red-600 text-sm">{ratingError}</span>}
+                </form>
                 <p className="text-slate-600">Based on student reviews</p>
               </CardContent>
             </Card>

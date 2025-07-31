@@ -297,6 +297,34 @@ export default function AdminDashboard() {
                         <Badge variant="secondary" className="capitalize">
                           {mess.category}
                         </Badge>
+                        <div className="flex items-center ml-2">
+                          {[...Array(5)].map((_, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              aria-label={`Set rating to ${i + 1}`}
+                              className={`w-4 h-4 focus:outline-none ${
+                                i < Math.round(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
+                              }`}
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/mess-groups/${mess.id}/rating`, {
+                                    method: "PATCH",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ rating: i + 1 }),
+                                  })
+                                  if (!res.ok) throw new Error("Failed to update rating")
+                                  setMessGroups((prev) => prev.map((m) => m.id === mess.id ? { ...m, rating: i + 1 } : m))
+                                } catch (err) {
+                                  alert("Failed to update rating. Please try again.")
+                                }
+                              }}
+                            >
+                              <span role="img" aria-label={i < Math.round(mess.rating || 0) ? "filled star" : "empty star"}>★</span>
+                            </button>
+                          ))}
+                          <span className="text-xs text-slate-600 ml-1">{mess.rating || 0}</span>
+                        </div>
                         <Badge variant={mess.is_active ? "default" : "secondary"}>
                           {mess.is_active ? "Active" : "Inactive"}
                         </Badge>
