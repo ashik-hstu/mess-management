@@ -1,38 +1,20 @@
 
-// import withPWA from 'next-pwa'
+import withPWAInit from "@ducanh2912/next-pwa";
 
-// const nextConfig = {
-//   typescript: {
-//     ignoreBuildErrors: true,
-//   },
-//   images: {
-//     unoptimized: true,
-//   },
-//   // ...other Next.js config options
-// }
+const withPWA = withPWAInit({
+  dest: "public",
+});
 
-// export default withPWA({
-//   ...nextConfig,
-//   pwa: {
-//     dest: 'public',
-//     register: true,
-//     skipWaiting: true,
-//     disable: process.env.NODE_ENV === 'development',
-//     // You can add more options here if needed
-//   },
-// })
-
-/** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
   images: {
     unoptimized: true,
   },
-}
+  // ...other Next.js config
+};
 
-export default nextConfig
+export default withPWA({
+  ...nextConfig,
+});
