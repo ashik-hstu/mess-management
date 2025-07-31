@@ -12,6 +12,203 @@ export async function getAllUsers() {
     throw error
   }
 }
+
+// Booking-related helper functions
+
+// Create a new order
+export async function createOrder(userId: number, messGroupId: number, roomType: string) {
+  try {
+    const result = await sql`
+      INSERT INTO orders (user_id, mess_group_id, room_type, status)
+      VALUES (${userId}, ${messGroupId}, ${roomType}, 'pending')
+      RETURNING *
+    `
+    return result[0]
+  } catch (error) {
+    console.error("Error creating order:", error)
+    throw error
+  }
+}
+
+// Create a new transaction
+export async function createTransaction(orderId: number, amount: number, stripePaymentIntentId?: string) {
+  try {
+    const result = await sql`
+      INSERT INTO transactions (order_id, amount, currency, status, stripe_payment_intent_id)
+      VALUES (${orderId}, ${amount}, 'BDT', 'pending', ${stripePaymentIntentId || null})
+      RETURNING *
+    `
+    return result[0]
+  } catch (error) {
+    console.error("Error creating transaction:", error)
+    throw error
+  }
+}
+
+// Update order status
+export async function updateOrderStatus(orderId: number, status: string) {
+  try {
+    const result = await sql`
+      UPDATE orders
+      SET status = ${status}
+      WHERE id = ${orderId}
+      RETURNING *
+    `
+    return result[0]
+  } catch (error) {
+    console.error("Error updating order status:", error)
+    throw error
+  }
+}
+
+// Update transaction status
+export async function updateTransactionStatus(transactionId: number, status: string, paymentMethod?: string) {
+  try {
+    const result = await sql`
+      UPDATE transactions
+      SET status = ${status}, 
+          payment_method = ${paymentMethod || null},
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${transactionId}
+      RETURNING *
+    `
+    return result[0]
+  } catch (error) {
+    console.error("Error updating transaction status:", error)
+    throw error
+  }
+}
+
+// Get user's orders
+export async function getUserOrders(userId: number) {
+  try {
+    const result = await sql`
+      SELECT 
+        o.*,
+        mg.name as mess_name,
+        mg.location,
+        mg.category,
+        mg.address,
+        t.amount,
+        t.currency,
+        t.status as transaction_status,
+        t.payment_method,
+        t.created_at as transaction_date
+      FROM orders o
+      LEFT JOIN mess_groups mg ON o.mess_group_id = mg.id
+      LEFT JOIN transactions t ON o.id = t.order_id
+      WHERE o.user_id = ${userId}
+      ORDER BY o.created_at DESC
+    `
+    return result
+  } catch (error) {
+    console.error("Error fetching user orders:", error)
+    throw error
+  }
+}
+
+// Get order by ID
+export async function getOrderById(orderId: number) {
+  try {
+    const result = await sql`
+      SELECT 
+        o.*,
+        mg.name as mess_name,
+        mg.location,
+        mg.category,
+        mg.address,
+        t.id as transaction_id,
+        t.amount,
+        t.currency,
+        t.status as transaction_status,
+        t.payment_method,
+        t.stripe_payment_intent_id
+      FROM orders o
+      LEFT JOIN mess_groups mg ON o.mess_group_id = mg.id
+      LEFT JOIN transactions t ON o.id = t.order_id
+      WHERE o.id = ${orderId}
+    `
+    return result[0] || null
+  } catch (error) {
+    console.error("Error fetching order by ID:", error)
+    throw error
+  }
+}
+
+// Check if user already has an active booking for a mess
+export async function hasActiveBooking(userId: number, messGroupId: number) {
+  try {
+    const result = await sql`
+      SELECT COUNT(*) as count
+      FROM orders
+      WHERE user_id = ${userId} 
+        AND mess_group_id = ${messGroupId}
+        AND status IN ('pending', 'confirmed', 'paid')
+    `
+    return result[0].count > 0
+  } catch (error) {
+    console.error("Error checking active booking:", error)
+    throw error
+  }
+}
+
+// Get available seats for a mess
+export async function getAvailableSeats(messGroupId: number) {
+  try {
+    const messResult = await sql`
+      SELECT single_seats, double_seats
+      FROM mess_groups
+      WHERE id = ${messGroupId}
+    `
+    
+    if (messResult.length === 0) {
+      return null
+    }
+
+    const totalSeats = messResult[0]
+    
+    const bookedSeats = await sql`
+      SELECT 
+        COUNT(CASE WHEN room_type = 'single' THEN 1 END) as booked_single,
+        COUNT(CASE WHEN room_type = 'double' THEN 1 END) as booked_double
+      FROM orders
+      WHERE mess_group_id = ${messGroupId}
+        AND status IN ('confirmed', 'paid')
+    `
+    
+    const booked = bookedSeats[0] || { booked_single: 0, booked_double: 0 }
+    
+    return {
+      single_available: totalSeats.single_seats - booked.booked_single,
+      double_available: totalSeats.double_seats - booked.booked_double,
+      total_single: totalSeats.single_seats,
+      total_double: totalSeats.double_seats
+    }
+  } catch (error) {
+    console.error("Error getting available seats:", error)
+    throw error
+  }
+}
+
+// Update mess group available seats (decrement when booking confirmed)
+export async function updateMessSeats(messGroupId: number, roomType: string, increment: boolean = false) {
+  try {
+    const column = roomType === 'single' ? 'single_seats' : 'double_seats'
+    const operator = increment ? '+' : '-'
+    
+    const result = await sql`
+      UPDATE mess_groups
+      SET ${sql.unsafe(column)} = ${sql.unsafe(column)} ${sql.unsafe(operator)} 1
+      WHERE id = ${messGroupId}
+        AND ${sql.unsafe(column)} ${sql.unsafe(increment ? '>= 0' : '> 0')}
+      RETURNING *
+    `
+    return result[0] || null
+  } catch (error) {
+    console.error("Error updating mess seats:", error)
+    throw error
+  }
+}
 import { neon } from "@neondatabase/serverless"
 
 if (!process.env.DATABASE_URL) {

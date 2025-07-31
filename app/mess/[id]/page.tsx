@@ -104,6 +104,13 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [availableSeats, setAvailableSeats] = useState<any>(null);
+  const [bookingLoading, setBookingLoading] = useState<{single: boolean, double: boolean}>({
+    single: false,
+    double: false
+  });
+  const [bookingError, setBookingError] = useState("");
+  const [userBookings, setUserBookings] = useState<any[]>([]);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -123,7 +130,43 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
 
   useEffect(() => {
     fetchMessGroup();
-  }, [id]);
+    if (user?.id) {
+      fetchAvailableSeats();
+      fetchUserBookings();
+    }
+  }, [id, user]);
+
+  const fetchAvailableSeats = async () => {
+    try {
+      const response = await fetch(`/api/mess-groups/${id}/seats`);
+      const data = await response.json();
+      if (data.success) {
+        setAvailableSeats(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching available seats:', error);
+    }
+  };
+
+  const fetchUserBookings = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await fetch(`/api/bookings/history?user_id=${user.id}`);
+      const data = await response.json();
+      if (data.success) {
+        setUserBookings(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching user bookings:', error);
+    }
+  };
+
+  const hasActiveBookingForMess = () => {
+    return userBookings.some(booking => 
+      booking.mess_group_id === parseInt(id) && 
+      ['pending', 'confirmed', 'paid'].includes(booking.status)
+    );
+  };
 
   const handleStarClick = (star: number) => {
     setUserRating(star)
@@ -192,22 +235,55 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
   }
 
   const handleBook = async (roomType: 'single' | 'double') => {
-    if (!user) return;
+    if (!user) {
+      const currentPath = window.location.pathname;
+      router.replace(`/owner/login?redirect_back=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+
+    // Check if user already has an active booking for this mess
+    if (hasActiveBookingForMess()) {
+      setBookingError('You already have an active booking for this mess');
+      return;
+    }
+
+    // Check available seats
+    const isAvailable = roomType === 'single' 
+      ? availableSeats?.single_available > 0 
+      : availableSeats?.double_available > 0;
+
+    if (!isAvailable) {
+      setBookingError(`No ${roomType} rooms available`);
+      return;
+    }
+
+    setBookingLoading(prev => ({ ...prev, [roomType]: true }));
+    setBookingError("");
+
     try {
-      const res = await fetch(`/api/bookings/initiate`, {
+      const response = await fetch('/api/bookings/initiate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          user_id: user.id,
           mess_group_id: messGroup?.id,
           room_type: roomType,
         }),
       });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url; // Redirect to Stripe checkout
+
+      const data = await response.json();
+      
+      if (data.success && data.url) {
+        // Redirect to Stripe checkout
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || 'Booking initiation failed');
       }
-    } catch (err) {
-      alert('Booking initiation failed.');
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      setBookingError(error.message || 'Booking initiation failed. Please try again.');
+    } finally {
+      setBookingLoading(prev => ({ ...prev, [roomType]: false }));
     }
   };
 
@@ -248,6 +324,7 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
   const gradientClass = categoryColor === "blue" ? "from-blue-600 to-cyan-600" : "from-pink-600 to-rose-600"
   const imageUrl = categoryColor === "blue" ? "/images/boys-mess-building.png" : "/images/girls-mess-building.png"
 
+  // End of MessDetailPage function
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Navigation */}
@@ -355,6 +432,20 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                 <CardTitle className="text-2xl">Pricing & Availability</CardTitle>
               </CardHeader>
               <CardContent>
+                {bookingError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm">{bookingError}</p>
+                  </div>
+                )}
+                
+                {hasActiveBookingForMess() && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-blue-600 text-sm">
+                      You already have an active booking for this mess. Check your booking history for details.
+                    </p>
+                  </div>
+                )}
+
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
                     <div className="flex items-center mb-4">
@@ -363,16 +454,33 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                     </div>
                     <div className="text-3xl font-bold text-blue-900 mb-2">৳{messGroup.single_price}</div>
                     <div className="text-blue-700 mb-4">per month</div>
-                    <div className="flex items-center">
+                    <div className="flex items-center mb-4">
                       <Users className="w-4 h-4 text-blue-600 mr-2" />
-                      <span className="text-blue-700">{messGroup.single_seats} seats available</span>
+                      <span className="text-blue-700">
+                        {availableSeats?.single_available || 0} available of {availableSeats?.total_single || messGroup.single_seats}
+                      </span>
                     </div>
                     <Button
                       className="mt-4 w-full"
-                      disabled={messGroup.single_seats < 1}
+                      disabled={
+                        bookingLoading.single || 
+                        (availableSeats?.single_available || 0) < 1 || 
+                        hasActiveBookingForMess()
+                      }
                       onClick={() => handleBook('single')}
                     >
-                      Book Single Room
+                      {bookingLoading.single ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (availableSeats?.single_available || 0) < 1 ? (
+                        'No Single Rooms Available'
+                      ) : hasActiveBookingForMess() ? (
+                        'Already Booked'
+                      ) : (
+                        'Book Single Room'
+                      )}
                     </Button>
                   </div>
 
@@ -383,16 +491,33 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                     </div>
                     <div className="text-3xl font-bold text-emerald-900 mb-2">৳{messGroup.double_price}</div>
                     <div className="text-emerald-700 mb-4">per month</div>
-                    <div className="flex items-center">
+                    <div className="flex items-center mb-4">
                       <Users className="w-4 h-4 text-emerald-600 mr-2" />
-                      <span className="text-emerald-700">{messGroup.double_seats} seats available</span>
+                      <span className="text-emerald-700">
+                        {availableSeats?.double_available || 0} available of {availableSeats?.total_double || messGroup.double_seats}
+                      </span>
                     </div>
                     <Button
                       className="mt-4 w-full"
-                      disabled={messGroup.double_seats < 1}
+                      disabled={
+                        bookingLoading.double || 
+                        (availableSeats?.double_available || 0) < 1 || 
+                        hasActiveBookingForMess()
+                      }
                       onClick={() => handleBook('double')}
                     >
-                      Book Double Room
+                      {bookingLoading.double ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Processing...
+                        </>
+                      ) : (availableSeats?.double_available || 0) < 1 ? (
+                        'No Double Rooms Available'
+                      ) : hasActiveBookingForMess() ? (
+                        'Already Booked'
+                      ) : (
+                        'Book Double Room'
+                      )}
                     </Button>
                   </div>
                 </div>
