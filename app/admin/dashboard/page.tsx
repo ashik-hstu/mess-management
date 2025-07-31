@@ -347,7 +347,7 @@ export default function AdminDashboard() {
           <Separator className="bg-slate-700 mb-6" />
           <p className="text-slate-400 mb-2">&copy; 2025 HSTU Mess Finder. All rights reserved.</p>
           <p className="text-slate-500">
-            Developed with ❤️ by <span className="text-orange-400 font-medium">Ashik HentaiSami</span>
+            Developed with ❤️ by <span className="text-orange-400 font-medium">Ashik Hentai</span>
           </p>
         </div>
       </footer>

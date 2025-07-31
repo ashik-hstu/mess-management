@@ -374,7 +374,7 @@ export default function HomePage() {
             <p className="text-slate-400 mb-4 md:mb-0">&copy; 2025 HSTU Mess Finder. All rights reserved.</p>
             <p className="text-slate-500">
               Developed with <Heart className="w-4 h-4 inline text-red-400" /> by{" "}
-              <span className="text-orange-400 font-medium">Ashik HentaiSami</span>
+              <span className="text-orange-400 font-medium">Ashik Hentai</span>
             </p>
           </div>
         </div>
