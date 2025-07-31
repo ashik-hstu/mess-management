@@ -43,6 +43,10 @@ export async function GET(request: NextRequest) {
         mg.price_per_month,
         mg.capacity,
         mg.available_seats,
+        mg.single_seats,
+        mg.single_price,
+        mg.double_seats,
+        mg.double_price,
         mg.contact_phone,
         mg.contact_email,
         mg.address,
@@ -188,6 +192,10 @@ export async function GET(request: NextRequest) {
       price_per_month: Number.parseFloat(row.price_per_month),
       capacity: row.capacity,
       available_seats: row.available_seats,
+      single_seats: row.single_seats,
+      single_price: Number.parseFloat(row.single_price),
+      double_seats: row.double_seats,
+      double_price: Number.parseFloat(row.double_price),
       contact_phone: row.contact_phone,
       contact_email: row.contact_email,
       address: row.address,
@@ -244,6 +252,10 @@ export async function POST(request: NextRequest) {
       price_per_month,
       capacity,
       available_seats,
+      single_seats,
+      single_price,
+      double_seats,
+      double_price,
       contact_phone,
       contact_email,
       address,
@@ -295,12 +307,12 @@ export async function POST(request: NextRequest) {
     const result = await sql`
       INSERT INTO mess_groups (
         name, description, location, category, price_per_month, capacity, 
-        available_seats, contact_phone, contact_email, address, amenities, 
+        available_seats, single_seats, single_price, double_seats, double_price, contact_phone, contact_email, address, amenities, 
         images, owner_id, is_active
       )
       VALUES (
         ${name}, ${description || ""}, ${location}, ${category}, ${price_per_month}, 
-        ${capacity}, ${available_seats || capacity}, ${contact_phone || ""}, 
+        ${capacity}, ${available_seats || capacity}, ${single_seats || 0}, ${single_price || 0}, ${double_seats || 0}, ${double_price || 0}, ${contact_phone || ""}, 
         ${contact_email || ""}, ${address || ""}, ${JSON.stringify(amenities || [])}, 
         ${JSON.stringify(images || [])}, ${owner_id || null}, true
       )
@@ -323,6 +335,10 @@ export async function POST(request: NextRequest) {
           price_per_month: Number.parseFloat(messGroup.price_per_month),
           capacity: messGroup.capacity,
           available_seats: messGroup.available_seats,
+          single_seats: messGroup.single_seats,
+          single_price: Number.parseFloat(messGroup.single_price),
+          double_seats: messGroup.double_seats,
+          double_price: Number.parseFloat(messGroup.double_price),
           contact_phone: messGroup.contact_phone,
           contact_email: messGroup.contact_email,
           address: messGroup.address,
