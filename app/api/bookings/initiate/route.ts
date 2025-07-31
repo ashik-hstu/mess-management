@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { getMessGroupById, createOrder, createTransaction, hasActiveBooking, getAvailableSeats } from '@/lib/db';
+import { getMessGroupById, createOrder, createTransaction, hasActiveBooking, getAvailableSeats, getUserOrders, getOrderById } from '@/lib/db';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-07-30.basil' });
 
@@ -13,11 +13,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid request parameters' }, { status: 400 });
     }
 
-    // Check if user already has an active booking for this mess
-    const hasExistingBooking = await hasActiveBooking(user_id, mess_group_id);
-    if (hasExistingBooking) {
-      return NextResponse.json({ error: 'You already have an active booking for this mess' }, { status: 400 });
-    }
+
+    // Check for existing pending order for this user/mess/room_type
+    const userOrders = await getUserOrders(user_id);
+    let order = userOrders.find(
+      (o: any) => o.mess_group_id === mess_group_id && o.room_type === room_type && o.status === 'pending'
+    );
 
     // Check available seats
     const availableSeats = await getAvailableSeats(mess_group_id);
@@ -44,16 +45,36 @@ export async function POST(req: NextRequest) {
 
     const price = room_type === 'single' ? messGroup.single_price : messGroup.double_price;
 
-    // Create order in database
-    const order = await createOrder(user_id, mess_group_id, room_type);
-    if (!order) {
-      return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
-    }
 
-    // Create transaction record
-    const transaction = await createTransaction(order.id, price);
-    if (!transaction) {
-      return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
+    let transaction;
+    if (!order) {
+      // No pending order, create new order and transaction
+      order = await createOrder(user_id, mess_group_id, room_type);
+      if (!order) {
+        return NextResponse.json({ error: 'Failed to create order' }, { status: 500 });
+      }
+      transaction = await createTransaction(order.id, price);
+      if (!transaction) {
+        return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
+      }
+    } else {
+      // Pending order exists, get or create transaction
+      const orderDetails = await getOrderById(order.id);
+      if (orderDetails && orderDetails.transaction_id) {
+        transaction = {
+          id: orderDetails.transaction_id,
+          amount: orderDetails.amount,
+          currency: orderDetails.currency,
+          status: orderDetails.transaction_status,
+          payment_method: orderDetails.payment_method,
+          stripe_payment_intent_id: orderDetails.stripe_payment_intent_id
+        };
+      } else {
+        transaction = await createTransaction(order.id, price);
+        if (!transaction) {
+          return NextResponse.json({ error: 'Failed to create transaction' }, { status: 500 });
+        }
+      }
     }
 
     // Create Stripe Checkout Session

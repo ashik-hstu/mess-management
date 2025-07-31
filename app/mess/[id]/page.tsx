@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams, useParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -92,10 +93,16 @@ function MobileMenu({ open, setOpen }: { open: boolean, setOpen: (v: boolean) =>
   );
 }
 
-export default function MessDetailPage({ params }: MessDetailPageProps) {
-  const { id } = params; // Destructure id from params
 
+
+export default function MessDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
   const router = require('next/navigation').useRouter();
+  const searchParams = useSearchParams();
+  const orderId = searchParams.get("order_id");
+  const success = searchParams.get("success");
+
   const [user, setUser] = useState<any>(null);
   const [messGroup, setMessGroup] = useState<MessGroup | null>(null);
   const [loading, setLoading] = useState(true);
@@ -111,6 +118,15 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
   });
   const [bookingError, setBookingError] = useState("");
   const [userBookings, setUserBookings] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (success === "1" && orderId) {
+      fetch(`/api/bookings/${orderId}/confirm`, { method: "POST" })
+        .then(() => fetchUserBookings())
+        .catch(console.error);
+    }
+    // eslint-disable-next-line
+  }, [success, orderId]);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");

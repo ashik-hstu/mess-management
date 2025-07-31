@@ -35,11 +35,12 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, context: any) {
   try {
     console.log("=== API GET /api/mess-groups/[id] START ===")
 
-    const id = params.id
+    const { params } = context;
+    const id = params.id;
     console.log("Fetching mess group with ID:", id)
 
     // Validate ID

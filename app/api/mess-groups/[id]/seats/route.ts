@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAvailableSeats } from '@/lib/db';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: NextRequest, context: any) {
   try {
+    const { params } = context;
     const messGroupId = parseInt(params.id);
 
     if (isNaN(messGroupId)) {
