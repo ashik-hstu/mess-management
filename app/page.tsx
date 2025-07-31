@@ -114,7 +114,7 @@ const features = [
           <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
             <Link href="/owner/login">
               <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-                <UserPlus className="w-4 h-4 mr-2" /> Owner Login
+                <UserPlus className="w-4 h-4 mr-2" /> Login
               </Button>
             </Link>
             <Link href="/owner/signup">
@@ -168,7 +168,7 @@ const features = [
             <div className="hidden sm:flex items-center gap-4">
               <Link href="/owner/login">
                 <Button variant="outline" size="sm">
-                  Owner Login
+                  Login
                 </Button>
               </Link>
               <Link href="/owner/signup">
@@ -432,7 +432,7 @@ const features = [
                 </li>
                 <li>
                   <Link href="/owner/login" className="hover:text-white transition-colors">
-                    Owner Login
+                    Login
                   </Link>
                 </li>
                 <li>

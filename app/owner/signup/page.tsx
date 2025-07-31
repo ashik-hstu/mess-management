@@ -137,7 +137,7 @@ export default function OwnerSignupPage() {
         <div className="max-w-md mx-auto">
           <Card className="border-0 shadow-2xl">
             <CardHeader className="text-center pb-8">
-              <CardTitle className="text-3xl font-bold text-slate-800">Create Owner Account</CardTitle>
+              <CardTitle className="text-3xl font-bold text-slate-800">Create Account</CardTitle>
               <CardDescription className="text-slate-600 mt-2">
                 Join HSTU Mess Finder to list and manage your mess services
               </CardDescription>

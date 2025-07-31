@@ -104,7 +104,7 @@ export default function OwnerLoginPage() {
         <div className="max-w-md mx-auto">
           <Card className="border-0 shadow-2xl">
             <CardHeader className="text-center pb-8">
-              <CardTitle className="text-3xl font-bold text-slate-800">Owner Login</CardTitle>
+              <CardTitle className="text-3xl font-bold text-slate-800">Login</CardTitle>
               <CardDescription className="text-slate-600 mt-2">
                 Sign in to manage your mess listings and bookings
               </CardDescription>
@@ -185,7 +185,7 @@ export default function OwnerLoginPage() {
                   <p className="text-slate-600 mb-4">{"Don't have an account?"}</p>
                   <Link href="/owner/signup">
                     <Button variant="outline" className="w-full h-12 bg-transparent">
-                      Create Owner Account
+                      Create Account
                     </Button>
                   </Link>
                 </div>

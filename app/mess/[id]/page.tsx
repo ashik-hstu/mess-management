@@ -85,7 +85,7 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
             </Link>
             <Link href="/owner/login">
               <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-                Owner Login
+                Login
               </Button>
             </Link>
           </div>
@@ -226,7 +226,7 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
               </Link>
               <Link href="/owner/login">
                 <Button variant="outline" size="sm">
-                  Owner Login
+                  Login
                 </Button>
               </Link>
             </div>

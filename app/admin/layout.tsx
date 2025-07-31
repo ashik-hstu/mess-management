@@ -30,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
       } else {
         setIsOwner(false)
-        router.replace("/")
+        router.replace("/user")
       }
     } catch {
       setIsOwner(false)
