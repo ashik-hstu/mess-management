@@ -132,6 +132,7 @@ export default function HomePage() {
 	const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
 	const [showInstall, setShowInstall] = useState(false)
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+	const [user, setUser] = useState<{ role: string } | null>(null);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return
@@ -144,6 +145,13 @@ export default function HomePage() {
 		window.addEventListener("beforeinstallprompt", handler)
 		return () => window.removeEventListener("beforeinstallprompt", handler)
 	}, [])
+
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			const user = localStorage.getItem("user");
+			setUser(user ? JSON.parse(user) : null);
+		}
+	}, []);
 
 	const handleInstallClick = async () => {
 		if (!deferredPrompt) return
@@ -169,7 +177,7 @@ export default function HomePage() {
 									Home
 								</Button>
 							</Link>
-							{localStorage?.getItem("user") ? (
+							{user ? (
 								<div className="relative">
 									<Button
 										variant="outline"
@@ -185,7 +193,7 @@ export default function HomePage() {
 													Profile
 												</Button>
 											</Link>
-											{JSON.parse(localStorage.getItem("user") || "{}").role === "owner" && (
+											{user.role === "owner" && (
 												<Link href="/admin/dashboard">
 													<Button variant="ghost" className="w-full justify-start">
 														Admin Dashboard
