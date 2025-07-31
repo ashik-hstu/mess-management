@@ -1,45 +1,70 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
-import { verifyPassword, generateToken } from "@/lib/auth"
+import { comparePassword, generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    console.log("=== API POST /api/auth/login ===")
+
+    const body = await request.json()
+    const { email, password } = body
+
+    console.log("Login attempt for:", email)
 
     // Validate required fields
     if (!email || !password) {
-      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Email and password are required",
+        },
+        { status: 400 },
+      )
     }
 
-    // Find user by email
+    // Find user
     const result = await sql`
       SELECT id, name, email, mobile, password_hash, role, is_active
       FROM users 
-      WHERE email = ${email}
+      WHERE email = ${email} AND is_active = true
     `
 
     if (result.length === 0) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid email or password",
+        },
+        { status: 401 },
+      )
     }
 
     const user = result[0]
 
-    // Check if user is active
-    if (!user.is_active) {
-      return NextResponse.json({ error: "Account is deactivated" }, { status: 401 })
-    }
-
     // Verify password
-    const isValidPassword = await verifyPassword(password, user.password_hash)
+    const isValidPassword = await comparePassword(password, user.password_hash)
 
     if (!isValidPassword) {
-      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Invalid email or password",
+        },
+        { status: 401 },
+      )
     }
 
+    console.log("Login successful for user:", user.id)
+
     // Generate token
-    const token = generateToken(user.id, user.email)
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    })
 
     return NextResponse.json({
+      success: true,
       message: "Login successful",
       user: {
         id: user.id,
@@ -51,7 +76,15 @@ export async function POST(request: NextRequest) {
       token,
     })
   } catch (error) {
-    console.error("Login error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("API Error in POST /api/auth/login:", error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to login",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    )
   }
 }

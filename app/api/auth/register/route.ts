@@ -4,11 +4,22 @@ import { hashPassword, generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, mobile, password } = await request.json()
+    console.log("=== API POST /api/auth/register ===")
+
+    const body = await request.json()
+    const { name, email, mobile, password } = body
+
+    console.log("Registration attempt for:", { name, email, mobile })
 
     // Validate required fields
     if (!name || !email || !password) {
-      return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Name, email, and password are required",
+        },
+        { status: 400 },
+      )
     }
 
     // Check if user already exists
@@ -17,7 +28,13 @@ export async function POST(request: NextRequest) {
     `
 
     if (existingUser.length > 0) {
-      return NextResponse.json({ error: "User with this email already exists" }, { status: 409 })
+      return NextResponse.json(
+        {
+          success: false,
+          error: "User with this email already exists",
+        },
+        { status: 409 },
+      )
     }
 
     // Hash password
@@ -25,17 +42,23 @@ export async function POST(request: NextRequest) {
 
     // Create user
     const result = await sql`
-      INSERT INTO users (name, email, mobile, password_hash)
-      VALUES (${name}, ${email}, ${mobile || null}, ${passwordHash})
+      INSERT INTO users (name, email, mobile, password_hash, role)
+      VALUES (${name}, ${email}, ${mobile || ""}, ${passwordHash}, 'owner')
       RETURNING id, name, email, mobile, role, created_at
     `
 
     const user = result[0]
+    console.log("User created successfully:", user)
 
     // Generate token
-    const token = generateToken(user.id, user.email)
+    const token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.role,
+    })
 
     return NextResponse.json({
+      success: true,
       message: "User registered successfully",
       user: {
         id: user.id,
@@ -43,12 +66,19 @@ export async function POST(request: NextRequest) {
         email: user.email,
         mobile: user.mobile,
         role: user.role,
-        created_at: user.created_at,
       },
       token,
     })
   } catch (error) {
-    console.error("Registration error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("API Error in POST /api/auth/register:", error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: "Failed to register user",
+        details: error instanceof Error ? error.message : String(error),
+      },
+      { status: 500 },
+    )
   }
 }

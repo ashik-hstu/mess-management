@@ -13,33 +13,30 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Building2, MapPin, Users, Bed, DollarSign, Phone, Mail, Home, ArrowLeft, Loader2, Plus, X } from "lucide-react"
+import { Separator } from "@/components/ui/separator"
+import { ArrowLeft, Building2, Users, Phone, Mail, Home, Loader2, AlertCircle, CheckCircle } from "lucide-react"
 
 interface User {
   id: number
   name: string
   email: string
-  mobile?: string
+  mobile: string
   role: string
 }
 
 const availableAmenities = [
   "WiFi",
-  "AC",
-  "Generator",
-  "Parking",
   "24/7 Security",
-  "CCTV",
-  "Laundry",
-  "Common Room",
+  "Generator",
+  "AC",
+  "Parking",
   "Study Room",
-  "Library",
+  "Common Room",
   "Garden",
-  "Gym",
-  "Common Kitchen",
+  "Laundry",
+  "CCTV",
+  "Lift",
   "Balcony",
-  "Female Caretaker",
-  "Female Security",
 ]
 
 const locations = [
@@ -48,8 +45,13 @@ const locations = [
   { value: "kornai", label: "Kornai" },
 ]
 
-export default function CreateMessGroup() {
+export default function CreateMessGroupPage() {
+  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+
   const [formData, setFormData] = useState({
     name: "",
     location: "",
@@ -62,15 +64,11 @@ export default function CreateMessGroup() {
     contact_phone: "",
     contact_email: "",
     address: "",
+    amenities: [] as string[],
   })
-  const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
-  const router = useRouter()
 
   useEffect(() => {
-    // Check authentication
+    // Check if user is logged in
     const token = localStorage.getItem("token")
     const userData = localStorage.getItem("user")
 
@@ -89,9 +87,32 @@ export default function CreateMessGroup() {
         contact_phone: parsedUser.mobile || "",
       }))
     } catch (error) {
+      console.error("Error parsing user data:", error)
       router.push("/owner/login")
     }
   }, [router])
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleSelectChange = (name: string, value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }))
+  }
+
+  const handleAmenityChange = (amenity: string, checked: boolean) => {
+    setFormData((prev) => ({
+      ...prev,
+      amenities: checked ? [...prev.amenities, amenity] : prev.amenities.filter((a) => a !== amenity),
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,6 +127,8 @@ export default function CreateMessGroup() {
     }
 
     try {
+      console.log("Frontend: Creating mess group with data:", formData)
+
       const response = await fetch("/api/mess-groups", {
         method: "POST",
         headers: {
@@ -113,41 +136,48 @@ export default function CreateMessGroup() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          ...formData,
+          name: formData.name,
+          location: formData.location,
+          category: formData.category,
+          description: formData.description,
           single_seats: Number.parseInt(formData.single_seats) || 0,
           single_price: Number.parseFloat(formData.single_price) || 0,
           double_seats: Number.parseInt(formData.double_seats) || 0,
           double_price: Number.parseFloat(formData.double_price) || 0,
-          amenities: selectedAmenities,
+          contact_phone: formData.contact_phone,
+          contact_email: formData.contact_email,
+          address: formData.address,
+          amenities: formData.amenities,
         }),
       })
 
-      const data = await response.json()
+      const responseText = await response.text()
+      console.log("Frontend: Raw response:", responseText.substring(0, 200))
 
-      if (!response.ok) {
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error("Frontend: JSON parse error:", parseError)
+        throw new Error(`Invalid response: ${responseText.substring(0, 100)}`)
+      }
+
+      if (!data.success) {
         throw new Error(data.error || "Failed to create mess group")
       }
 
-      setSuccess("Mess group created successfully!")
+      setSuccess("Mess group created successfully! Redirecting to dashboard...")
+
+      // Redirect to dashboard after a short delay
       setTimeout(() => {
         router.push("/admin/dashboard")
       }, 2000)
     } catch (error: any) {
-      setError(error.message || "An error occurred while creating the mess group")
+      console.error("Frontend: Error creating mess group:", error)
+      setError(error.message || "Failed to create mess group")
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
-  }
-
-  const handleAmenityToggle = (amenity: string) => {
-    setSelectedAmenities((prev) => (prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]))
   }
 
   if (!user) {
@@ -188,16 +218,15 @@ export default function CreateMessGroup() {
         </div>
       </nav>
 
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-4xl font-bold text-slate-800 mb-2">Create New Mess Group</h1>
-            <p className="text-lg text-slate-600">Add your mess facility to connect with students</p>
+            <h1 className="text-4xl font-bold text-slate-800 mb-2">Create New Mess Listing</h1>
+            <p className="text-slate-600">Add your mess to help students find accommodation</p>
           </div>
 
-          {/* Form */}
-          <Card className="border-0 shadow-xl">
+          <Card className="border-0 shadow-2xl">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl">
                 <Building2 className="w-6 h-6 mr-3" />
@@ -205,261 +234,209 @@ export default function CreateMessGroup() {
               </CardTitle>
               <CardDescription>Fill in the details about your mess facility</CardDescription>
             </CardHeader>
-
             <CardContent>
               {error && (
                 <Alert className="mb-6 border-red-200 bg-red-50">
+                  <AlertCircle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-700">{error}</AlertDescription>
                 </Alert>
               )}
 
               {success && (
                 <Alert className="mb-6 border-green-200 bg-green-50">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
                   <AlertDescription className="text-green-700">{success}</AlertDescription>
                 </Alert>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Basic Information */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-base font-medium">
-                      Mess Name *
-                    </Label>
-                    <div className="relative">
-                      <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Basic Information</h3>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="name" className="text-slate-700 font-medium">
+                        Mess Name *
+                      </Label>
                       <Input
                         id="name"
                         name="name"
-                        type="text"
-                        required
+                        placeholder="e.g., Green Valley Boys Mess"
                         value={formData.name}
-                        onChange={handleChange}
-                        className="pl-12 h-12"
-                        placeholder="Enter mess name"
+                        onChange={handleInputChange}
+                        className="h-12"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="location" className="text-slate-700 font-medium">
+                        Location *
+                      </Label>
+                      <Select
+                        value={formData.location}
+                        onValueChange={(value) => handleSelectChange("location", value)}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select location" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {locations.map((location) => (
+                            <SelectItem key={location.value} value={location.value}>
+                              {location.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="category" className="text-slate-700 font-medium">
+                        Category *
+                      </Label>
+                      <Select
+                        value={formData.category}
+                        onValueChange={(value) => handleSelectChange("category", value)}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="boys">Boys Mess</SelectItem>
+                          <SelectItem value="girls">Girls Mess</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="address" className="text-slate-700 font-medium">
+                        Full Address *
+                      </Label>
+                      <Input
+                        id="address"
+                        name="address"
+                        placeholder="e.g., House #45, Road #3, Mohabolipur"
+                        value={formData.address}
+                        onChange={handleInputChange}
+                        className="h-12"
+                        required
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="location" className="text-base font-medium">
-                      Location *
+                    <Label htmlFor="description" className="text-slate-700 font-medium">
+                      Description
                     </Label>
-                    <Select
-                      value={formData.location}
-                      onValueChange={(value) => setFormData({ ...formData, location: value })}
-                    >
-                      <SelectTrigger className="h-12">
-                        <div className="flex items-center">
-                          <MapPin className="w-5 h-5 text-slate-400 mr-3" />
-                          <SelectValue placeholder="Select location" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {locations.map((location) => (
-                          <SelectItem key={location.value} value={location.value}>
-                            {location.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="category" className="text-base font-medium">
-                      Category *
-                    </Label>
-                    <Select
-                      value={formData.category}
-                      onValueChange={(value) => setFormData({ ...formData, category: value })}
-                    >
-                      <SelectTrigger className="h-12">
-                        <div className="flex items-center">
-                          <Users className="w-5 h-5 text-slate-400 mr-3" />
-                          <SelectValue placeholder="Select category" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="boys">Boys</SelectItem>
-                        <SelectItem value="girls">Girls</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="address" className="text-base font-medium">
-                      Address
-                    </Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      type="text"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className="h-12"
-                      placeholder="Enter full address"
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Describe your mess facilities, food quality, environment, etc."
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      rows={4}
                     />
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-base font-medium">
-                    Description
-                  </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleChange}
-                    className="min-h-24"
-                    placeholder="Describe your mess facility, amenities, and what makes it special..."
-                  />
-                </div>
-
-                {/* Pricing and Capacity */}
+                {/* Pricing & Capacity */}
                 <div className="space-y-6">
-                  <h3 className="text-xl font-semibold text-slate-800 flex items-center">
-                    <Bed className="w-5 h-5 mr-2" />
-                    Pricing & Capacity
-                  </h3>
+                  <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Pricing & Capacity</h3>
 
                   <div className="grid md:grid-cols-2 gap-8">
-                    <Card className="border border-blue-200 bg-blue-50/50">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg text-blue-800">Single Occupancy</CardTitle>
-                        <CardDescription>Private rooms for individual students</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                    <div className="bg-blue-50 p-6 rounded-xl space-y-4">
+                      <h4 className="font-semibold text-blue-800 flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        Single Room
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="single_seats" className="text-sm font-medium">
-                            Number of Seats
+                          <Label htmlFor="single_seats" className="text-blue-700 font-medium">
+                            Available Seats
                           </Label>
                           <Input
                             id="single_seats"
                             name="single_seats"
                             type="number"
-                            min="0"
-                            value={formData.single_seats}
-                            onChange={handleChange}
-                            className="h-10"
                             placeholder="0"
+                            value={formData.single_seats}
+                            onChange={handleInputChange}
+                            className="h-10"
+                            min="0"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="single_price" className="text-sm font-medium">
-                            Price per Month (৳)
+                          <Label htmlFor="single_price" className="text-blue-700 font-medium">
+                            Price (৳/month)
                           </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <Input
-                              id="single_price"
-                              name="single_price"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={formData.single_price}
-                              onChange={handleChange}
-                              className="pl-10 h-10"
-                              placeholder="0.00"
-                            />
-                          </div>
+                          <Input
+                            id="single_price"
+                            name="single_price"
+                            type="number"
+                            placeholder="0"
+                            value={formData.single_price}
+                            onChange={handleInputChange}
+                            className="h-10"
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
 
-                    <Card className="border border-green-200 bg-green-50/50">
-                      <CardHeader className="pb-4">
-                        <CardTitle className="text-lg text-green-800">Double Occupancy</CardTitle>
-                        <CardDescription>Shared rooms for two students</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
+                    <div className="bg-emerald-50 p-6 rounded-xl space-y-4">
+                      <h4 className="font-semibold text-emerald-800 flex items-center">
+                        <Users className="w-5 h-5 mr-2" />
+                        Double Room
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="double_seats" className="text-sm font-medium">
-                            Number of Seats
+                          <Label htmlFor="double_seats" className="text-emerald-700 font-medium">
+                            Available Seats
                           </Label>
                           <Input
                             id="double_seats"
                             name="double_seats"
                             type="number"
-                            min="0"
-                            value={formData.double_seats}
-                            onChange={handleChange}
-                            className="h-10"
                             placeholder="0"
+                            value={formData.double_seats}
+                            onChange={handleInputChange}
+                            className="h-10"
+                            min="0"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="double_price" className="text-sm font-medium">
-                            Price per Person/Month (৳)
+                          <Label htmlFor="double_price" className="text-emerald-700 font-medium">
+                            Price (৳/month)
                           </Label>
-                          <div className="relative">
-                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                            <Input
-                              id="double_price"
-                              name="double_price"
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              value={formData.double_price}
-                              onChange={handleChange}
-                              className="pl-10 h-10"
-                              placeholder="0.00"
-                            />
-                          </div>
+                          <Input
+                            id="double_price"
+                            name="double_price"
+                            type="number"
+                            placeholder="0"
+                            value={formData.double_price}
+                            onChange={handleInputChange}
+                            className="h-10"
+                            min="0"
+                            step="0.01"
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
-
-                {/* Amenities */}
-                <div className="space-y-4">
-                  <h3 className="text-xl font-semibold text-slate-800">Amenities & Facilities</h3>
-                  <p className="text-slate-600">Select all amenities available at your mess</p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {availableAmenities.map((amenity) => (
-                      <div key={amenity} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={amenity}
-                          checked={selectedAmenities.includes(amenity)}
-                          onCheckedChange={() => handleAmenityToggle(amenity)}
-                        />
-                        <Label htmlFor={amenity} className="text-sm font-medium cursor-pointer">
-                          {amenity}
-                        </Label>
                       </div>
-                    ))}
-                  </div>
-                  {selectedAmenities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
-                      {selectedAmenities.map((amenity) => (
-                        <div
-                          key={amenity}
-                          className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm"
-                        >
-                          <span>{amenity}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleAmenityToggle(amenity)}
-                            className="hover:bg-orange-200 rounded-full p-1"
-                          >
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
                     </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Contact Information */}
                 <div className="space-y-6">
-                  <h3 className="text-xl font-semibold text-slate-800">Contact Information</h3>
+                  <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Contact Information</h3>
+
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <Label htmlFor="contact_phone" className="text-base font-medium">
-                        Contact Phone
+                      <Label htmlFor="contact_phone" className="text-slate-700 font-medium">
+                        Phone Number *
                       </Label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -467,17 +444,18 @@ export default function CreateMessGroup() {
                           id="contact_phone"
                           name="contact_phone"
                           type="tel"
+                          placeholder="01XXXXXXXXX"
                           value={formData.contact_phone}
-                          onChange={handleChange}
-                          className="pl-12 h-12"
-                          placeholder="Enter contact number"
+                          onChange={handleInputChange}
+                          className="pl-10 h-12"
+                          required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="contact_email" className="text-base font-medium">
-                        Contact Email
+                      <Label htmlFor="contact_email" className="text-slate-700 font-medium">
+                        Email Address *
                       </Label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -485,47 +463,81 @@ export default function CreateMessGroup() {
                           id="contact_email"
                           name="contact_email"
                           type="email"
+                          placeholder="your@email.com"
                           value={formData.contact_email}
-                          onChange={handleChange}
-                          className="pl-12 h-12"
-                          placeholder="Enter contact email"
+                          onChange={handleInputChange}
+                          className="pl-10 h-12"
+                          required
                         />
                       </div>
                     </div>
                   </div>
                 </div>
 
+                {/* Amenities */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-slate-800 border-b pb-2">Amenities & Facilities</h3>
+
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {availableAmenities.map((amenity) => (
+                      <div key={amenity} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={amenity}
+                          checked={formData.amenities.includes(amenity)}
+                          onCheckedChange={(checked) => handleAmenityChange(amenity, checked as boolean)}
+                        />
+                        <Label htmlFor={amenity} className="text-sm font-medium text-slate-700">
+                          {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <Separator />
+
                 {/* Submit Button */}
-                <div className="flex justify-end gap-4 pt-6 border-t">
-                  <Link href="/admin/dashboard">
-                    <Button type="button" variant="outline" size="lg">
-                      Cancel
-                    </Button>
-                  </Link>
+                <div className="flex gap-4">
                   <Button
                     type="submit"
                     disabled={loading}
-                    size="lg"
-                    className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 shadow-lg hover:shadow-xl transition-all duration-300"
+                    className="flex-1 h-12 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     {loading ? (
                       <>
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                        Creating...
+                        Creating Listing...
                       </>
                     ) : (
                       <>
-                        <Plus className="w-5 h-5 mr-2" />
-                        Create Mess Group
+                        <Building2 className="w-5 h-5 mr-2" />
+                        Create Mess Listing
                       </>
                     )}
                   </Button>
+                  <Link href="/admin/dashboard">
+                    <Button variant="outline" className="h-12 px-8 bg-transparent">
+                      Cancel
+                    </Button>
+                  </Link>
                 </div>
               </form>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white py-12 mt-16">
+        <div className="container mx-auto px-4 text-center">
+          <h3 className="text-xl font-bold mb-4">HSTU Mess Finder</h3>
+          <Separator className="bg-slate-700 mb-6" />
+          <p className="text-slate-400 mb-2">&copy; 2025 HSTU Mess Finder. All rights reserved.</p>
+          <p className="text-slate-500">
+            Developed with ❤️ by <span className="text-orange-400 font-medium">Samiul Islam Sami</span>
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

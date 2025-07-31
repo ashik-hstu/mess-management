@@ -25,23 +25,23 @@ import {
   AlertCircle,
 } from "lucide-react"
 
-// Mock data for different locations - Updated with correct location mappings
+// Location data mapping
 const messData = {
-  "mohabalipur-boys": {
-    title: "Mohabalipur Boys Accommodation",
+  "mohabolipur-boys": {
+    title: "Mohabolipur Boys Accommodation",
     description:
-      "Premium mess services in the heart of Mohabalipur area, offering comfortable living spaces for male students.",
+      "Premium mess services in the heart of Mohabolipur area, offering comfortable living spaces for male students.",
     color: "blue",
-    location: "mohabolipur", // This should match what's stored in database
+    location: "mohabolipur",
     category: "boys",
     image: "/images/boys-mess-building.png",
   },
-  "mohabalipur-girls": {
-    title: "Mohabalipur Girls Accommodation",
+  "mohabolipur-girls": {
+    title: "Mohabolipur Girls Accommodation",
     description:
-      "Safe and comfortable mess facilities in Mohabalipur, specially designed for female students with enhanced security.",
+      "Safe and comfortable mess facilities in Mohabolipur, specially designed for female students with enhanced security.",
     color: "pink",
-    location: "mohabolipur", // This should match what's stored in database
+    location: "mohabolipur",
     category: "girls",
     image: "/images/girls-mess-building.png",
   },
@@ -130,7 +130,9 @@ export default function LocationPage({ params }: LocationPageProps) {
   }
 
   useEffect(() => {
-    fetchMessGroups()
+    if (locationData.location && locationData.category) {
+      fetchMessGroups()
+    }
   }, [slug, locationData.location, locationData.category])
 
   const fetchMessGroups = async () => {
@@ -138,36 +140,56 @@ export default function LocationPage({ params }: LocationPageProps) {
       setLoading(true)
       setError("")
 
-      console.log("Fetching mess groups for:", {
+      console.log("Frontend: Fetching mess groups for:", {
         location: locationData.location,
         category: locationData.category,
         slug,
       })
 
-      if (!locationData.location || !locationData.category) {
-        console.log("Missing location or category data")
-        setError("Invalid location or category")
-        setLoading(false)
-        return
-      }
-
       const url = `/api/mess-groups?location=${encodeURIComponent(locationData.location)}&category=${encodeURIComponent(locationData.category)}`
-      console.log("Fetching from URL:", url)
+      console.log("Frontend: Fetching from URL:", url)
 
-      const response = await fetch(url)
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+      })
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`)
+      console.log("Frontend: Response status:", response.status)
+      console.log("Frontend: Response content-type:", response.headers.get("content-type"))
+
+      // Get the response text first to debug
+      const responseText = await response.text()
+      console.log("Frontend: Raw response (first 200 chars):", responseText.substring(0, 200))
+
+      // Check if response is JSON
+      if (!response.headers.get("content-type")?.includes("application/json")) {
+        throw new Error(
+          `Expected JSON response but got: ${response.headers.get("content-type")}. Response: ${responseText.substring(0, 100)}`,
+        )
       }
 
-      const data = await response.json()
-      console.log("Received data:", data)
+      // Try to parse as JSON
+      let data
+      try {
+        data = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error("Frontend: JSON parse error:", parseError)
+        throw new Error(`Invalid JSON response. Response was: ${responseText.substring(0, 200)}`)
+      }
+
+      console.log("Frontend: Parsed data:", data)
+
+      if (!data.success) {
+        throw new Error(data.details || data.error || "Failed to fetch mess groups")
+      }
 
       setMessGroups(data.messGroups || [])
       setFilteredMesses(data.messGroups || [])
     } catch (error: any) {
-      console.error("Error fetching mess groups:", error)
+      console.error("Frontend: Error fetching mess groups:", error)
       setError(error.message || "Failed to load mess groups")
     } finally {
       setLoading(false)
@@ -257,12 +279,7 @@ export default function LocationPage({ params }: LocationPageProps) {
 
       {/* Hero Header with Image */}
       <div className="relative overflow-hidden h-96">
-        <Image
-          src={locationData.image || "/placeholder.svg?height=400&width=800"}
-          alt={locationData.title}
-          fill
-          className="object-cover"
-        />
+        <Image src={locationData.image || "/placeholder.svg"} alt={locationData.title} fill className="object-cover" />
         <div className={`absolute inset-0 bg-gradient-to-r ${colors.gradient} bg-opacity-80`}></div>
         <div className="relative container mx-auto px-4 py-16 h-full flex flex-col justify-center">
           <div className="flex items-center justify-between mb-6">
@@ -306,7 +323,7 @@ export default function LocationPage({ params }: LocationPageProps) {
           </div>
         )}
 
-        {/* Debug Info (remove in production) */}
+        {/* Debug Info (development only) */}
         {process.env.NODE_ENV === "development" && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-medium text-blue-800 mb-2">Debug Info:</h3>
