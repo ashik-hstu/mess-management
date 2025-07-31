@@ -107,7 +107,7 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
         throw new Error(data.error || "Failed to fetch mess group")
       }
 
-      setMessGroup(data.messGroup)
+      setMessGroup(data.data)
     } catch (error: any) {
       console.error("Frontend: Error fetching mess group:", error)
       setError(error.message || "Failed to load mess group")
