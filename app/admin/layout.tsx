@@ -1,0 +1,65 @@
+"use client"
+import React, { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Home, Users, List, Menu, X } from "lucide-react"
+
+const navItems = [
+  { label: "Dashboard", href: "/admin/dashboard", icon: Home },
+//   { label: "Mess Groups", href: "/admin/mess-groups", icon: List },
+  { label: "Users", href: "/admin/users", icon: Users },
+]
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      {/* Top nav slot (rendered by page) */}
+      <div className="flex">
+        <AdminSidebar />
+        <main className="flex-1 min-w-0">{children}</main>
+      </div>
+      {/* Footer slot (rendered by page) */}
+    </div>
+  )
+}
+
+function AdminSidebar() {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  // On mobile, show a full-screen overlay with the sidebar when open
+  return (
+    <>
+      {/* Mobile sidebar overlay */}
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/40" onClick={() => setOpen(false)} />
+      )}
+      <aside
+        className={`h-screen sticky top-0 z-50 flex flex-col bg-white/90 border-r border-slate-200 shadow-sm w-16 sm:w-56 transition-all duration-200
+        ${open ? "fixed left-0 top-0 w-48 h-full sm:static sm:w-56" : ""}`}
+        style={{ minWidth: open ? 180 : 64 }}
+      >
+        {/* Mobile toggle */}
+        <div className="sm:hidden flex items-center justify-between px-2 py-3 border-b border-slate-100">
+          <button onClick={() => setOpen((v) => !v)} className="p-2 rounded hover:bg-slate-100">
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
+        {/* Nav links */}
+        <nav className={`flex-1 flex flex-col gap-2 py-4 ${open ? "" : "sm:gap-2"} ${open ? "" : "sm:items-start items-center"}`}
+          style={{ minWidth: open ? 180 : 64 }}>
+          {navItems.map(({ label, href, icon: Icon }) => (
+            <button
+              key={href}
+              onClick={() => { router.push(href); setOpen(false) }}
+              className={`flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-orange-50 transition-colors w-full
+                ${open || typeof window !== "undefined" && window.innerWidth >= 640 ? "justify-start" : "justify-center"}`}
+              title={label}
+            >
+              <Icon className="w-6 h-6 text-orange-600" />
+              <span className={`text-slate-800 font-medium text-base ${open || typeof window !== "undefined" && window.innerWidth >= 640 ? "inline" : "hidden sm:inline"}`}>{label}</span>
+            </button>
+          ))}
+        </nav>
+      </aside>
+    </>
+  )
+}
