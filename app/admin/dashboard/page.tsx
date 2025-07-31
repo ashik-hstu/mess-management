@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import EditMessModal from "@/components/admin/EditMessModal"
 import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import {
@@ -59,6 +60,39 @@ export default function AdminDashboard() {
   const [messGroups, setMessGroups] = useState<MessGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+
+  // Edit modal state and handlers
+  const [editOpen, setEditOpen] = useState(false)
+  const [editMess, setEditMess] = useState<MessGroup | null>(null)
+  const [editLoading, setEditLoading] = useState(false)
+
+  const handleEdit = (mess: MessGroup) => {
+    setEditMess(mess)
+    setEditOpen(true)
+  }
+
+  const handleSaveEdit = async (updated: MessGroup) => {
+    setEditLoading(true)
+    setError("")
+    try {
+      const res = await fetch(`/admin/mess-groups/update/${updated.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(updated),
+      })
+      const data = await res.json()
+      if (!data.success) throw new Error(data.error || "Failed to update")
+      setMessGroups((prev: MessGroup[]) => prev.map((m: MessGroup) => (m.id === updated.id ? { ...m, ...updated } : m)))
+      setEditOpen(false)
+    } catch (err: any) {
+      setError(err.message || "Failed to update mess group")
+    } finally {
+      setEditLoading(false)
+    }
+  }
 
   useEffect(() => {
     // Check if user is logged in
@@ -310,11 +344,19 @@ export default function AdminDashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => alert('Update feature coming soon!')}
+                        onClick={() => handleEdit(mess)}
                       >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
+      {/* Edit Modal (render once at root) */}
+      <EditMessModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        mess={editMess}
+        onSave={handleSaveEdit}
+        loading={editLoading}
+      />
                       <Button
                         variant="outline"
                         size="sm"
