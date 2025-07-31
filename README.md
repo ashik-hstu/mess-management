@@ -1,30 +1,94 @@
-# New Project Requirements
 
-*Automatically synced with your [v0.dev](https://v0.dev) deployments*
+## 🚀 Project Overview
 
-[![Deployed on Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com/ashikul-islams-projects-b03d77df/v0-new-project-requirements)
-[![Built with v0](https://img.shields.io/badge/Built%20with-v0.dev-black?style=for-the-badge)](https://v0.dev/chat/projects/Jw5yDA2WGA2)
+HSTU Mess Finder is a full-stack web application for managing and discovering student mess accommodations. It allows mess owners to list their properties and students to search, filter, and view available messes by location and category.
 
-## Overview
+## ✨ Features
 
-This repository will stay in sync with your deployed chats on [v0.dev](https://v0.dev).
-Any changes you make to your deployed app will be automatically pushed to this repository from [v0.dev](https://v0.dev).
+- Mess owner registration, login, and dashboard
+- Create, edit, and manage mess listings
+- Search and filter messes by location, category, and price
+- Detailed mess information pages
+- Amenities, images, and contact info for each mess
+- Admin dashboard with analytics
+- Responsive, modern UI (Next.js, Tailwind CSS)
+- PostgreSQL database (Neon)
 
-## Deployment
+## 🛠️ Tech Stack
 
-Your project is live at:
+- Next.js (App Router, API routes)
+- React, TypeScript
+- Tailwind CSS
+- PostgreSQL (Neon)
+- Lucide Icons
+- Shadcn UI components
 
-**[https://vercel.com/ashikul-islams-projects-b03d77df/v0-new-project-requirements](https://vercel.com/ashikul-islams-projects-b03d77df/v0-new-project-requirements)**
+## ⚡ Getting Started
 
-## Build your app
+### 1. Clone the repository
 
-Continue building your app on:
+```bash
+git clone https://github.com/ashik-hstu/mess-management.git
+cd mess-management
+```
 
-**[https://v0.dev/chat/projects/Jw5yDA2WGA2](https://v0.dev/chat/projects/Jw5yDA2WGA2)**
+### 2. Install dependencies
 
-## How It Works
+```bash
+pnpm install
+# or
+yarn install
+# or
+npm install
+```
 
-1. Create and modify your project using [v0.dev](https://v0.dev)
-2. Deploy your chats from the v0 interface
-3. Changes are automatically pushed to this repository
-4. Vercel deploys the latest version from this repository
+### 3. Configure environment variables
+
+Create a `.env` file in the root directory:
+
+```env
+DATABASE_URL=your_postgres_connection_url
+JWT_SECRET=your_jwt_secret
+```
+
+### 4. Set up the database
+
+Run the SQL scripts in the `scripts/` folder to create tables and seed data:
+
+```bash
+psql "$DATABASE_URL" < scripts/001-create-tables.sql
+psql "$DATABASE_URL" < scripts/002-seed-data.sql
+```
+
+### 5. Start the development server
+
+```bash
+pnpm dev
+# or
+yarn dev
+# or
+npm run dev
+```
+
+Visit [http://localhost:3000](http://localhost:3000) to view the app.
+
+## 🧑‍💻 Project Structure
+
+- `app/` — Next.js app directory (pages, API routes, UI)
+- `components/` — Reusable UI components
+- `lib/` — Utility functions and database client
+- `hooks/` — Custom React hooks
+- `public/` — Static assets and images
+- `scripts/` — SQL scripts for DB setup
+- `styles/` — Global styles
+
+## 📝 Contribution
+
+1. Fork the repo
+2. Create a new branch (`git checkout -b feature/your-feature`)
+3. Commit your changes
+4. Push to your fork and open a Pull Request
+
+## 📄 License
+
+MIT License. See [LICENSE](LICENSE) for details.

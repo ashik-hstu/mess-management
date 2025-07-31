@@ -231,7 +231,7 @@ export default function LocationPage({ params }: LocationPageProps) {
         throw new Error(data.details || data.error || "Failed to fetch mess groups")
       }
 
-      const messGroupsData = data.messGroups || []
+      const messGroupsData = data.data || []
       console.log("Frontend: Received mess groups:", messGroupsData.length)
 
       // Process amenities for each mess group
