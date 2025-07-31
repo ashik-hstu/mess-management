@@ -1,3 +1,37 @@
+export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+  try {
+    const id = params.id
+    if (!id || isNaN(Number(id))) {
+      return NextResponse.json(
+        { success: false, error: "Invalid mess group ID" },
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      )
+    }
+
+    // Optionally: check authentication/authorization here
+
+    // Soft delete: set is_active = false
+    const result = await sql`
+      UPDATE mess_groups SET is_active = false WHERE id = ${Number(id)} RETURNING id
+    `
+    if (result.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Mess group not found or already deleted" },
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      )
+    }
+    return NextResponse.json(
+      { success: true, message: "Mess group deleted successfully" },
+      { headers: { "Content-Type": "application/json" } }
+    )
+  } catch (error) {
+    console.error("API Error in DELETE /api/mess-groups/[id]:", error)
+    return NextResponse.json(
+      { success: false, error: "Failed to delete mess group", details: error instanceof Error ? error.message : String(error) },
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    )
+  }
+}
 import { type NextRequest, NextResponse } from "next/server"
 import { sql } from "@/lib/db"
 

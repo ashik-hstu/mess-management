@@ -307,11 +307,41 @@ export default function AdminDashboard() {
                           View
                         </Button>
                       </Link>
-                      <Button variant="outline" size="sm">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => alert('Update feature coming soon!')}
+                      >
                         <Edit className="w-4 h-4 mr-1" />
                         Edit
                       </Button>
-                      <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700 bg-transparent">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-red-600 hover:text-red-700 bg-transparent"
+                        onClick={async () => {
+                          if (confirm('Are you sure you want to delete this mess listing?')) {
+                            setLoading(true)
+                            setError("")
+                            try {
+                              const res = await fetch(`/api/mess-groups/${mess.id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                  'Content-Type': 'application/json',
+                                  Authorization: `Bearer ${localStorage.getItem('token')}`,
+                                },
+                              })
+                              const data = await res.json()
+                              if (!data.success) throw new Error(data.error || 'Failed to delete')
+                              setMessGroups((prev) => prev.filter((m) => m.id !== mess.id))
+                            } catch (err: any) {
+                              setError(err.message || 'Failed to delete mess group')
+                            } finally {
+                              setLoading(false)
+                            }
+                          }
+                        }}
+                      >
                         <Trash2 className="w-4 h-4 mr-1" />
                         Delete
                       </Button>
