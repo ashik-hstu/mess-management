@@ -11,20 +11,32 @@ const navItems = [
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const [isOwner, setIsOwner] = useState<boolean | null>(null)
+  const router = useRouter()
   useEffect(() => {
     if (typeof window === "undefined") return
     const userData = localStorage.getItem("user")
     if (!userData) {
       setIsOwner(false)
+      router.replace("/")
       return
     }
     try {
       const user = JSON.parse(userData)
-      setIsOwner(user.role === "owner")
+      if (user.role === "owner") {
+        setIsOwner(true)
+        // If already on /admin/*, do nothing, else redirect to dashboard
+        if (!window.location.pathname.startsWith("/admin")) {
+          router.replace("/admin/dashboard")
+        }
+      } else {
+        setIsOwner(false)
+        router.replace("/")
+      }
     } catch {
       setIsOwner(false)
+      router.replace("/")
     }
-  }, [])
+  }, [router])
 
   if (isOwner === null) {
     return (
@@ -36,13 +48,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     )
   }
   if (!isOwner) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="text-center">
-          <span className="text-2xl font-bold text-orange-600">Access denied. Owners only.</span>
-        </div>
-      </div>
-    )
+    // While redirecting, show nothing
+    return null
   }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">

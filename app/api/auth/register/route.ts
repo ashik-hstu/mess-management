@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
     // Create user
     const result = await sql`
       INSERT INTO users (name, email, mobile, password_hash, role, is_active)
-      VALUES (${name}, ${email.toLowerCase()}, ${mobile || ""}, ${passwordHash}, 'owner', true)
+      VALUES (${name}, ${email.toLowerCase()}, ${mobile || ""}, ${passwordHash}, 'user', true)
       RETURNING id, name, email, mobile, role, created_at
     `
 
