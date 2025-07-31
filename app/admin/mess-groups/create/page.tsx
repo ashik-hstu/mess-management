@@ -127,7 +127,23 @@ export default function CreateMessGroupPage() {
     }
 
     try {
-      console.log("Frontend: Creating mess group with data:", formData)
+      // Calculate required fields for API
+      const singleSeats = Number.parseInt(formData.single_seats) || 0;
+      const doubleSeats = Number.parseInt(formData.double_seats) || 0;
+      const singlePrice = Number.parseFloat(formData.single_price) || 0;
+      const doublePrice = Number.parseFloat(formData.double_price) || 0;
+      const capacity = singleSeats + doubleSeats;
+      // Use the minimum non-zero price as price_per_month, or 0 if both are 0
+      let price_per_month = 0;
+      if (singlePrice && doublePrice) price_per_month = Math.min(singlePrice, doublePrice);
+      else if (singlePrice) price_per_month = singlePrice;
+      else if (doublePrice) price_per_month = doublePrice;
+
+      console.log("Frontend: Creating mess group with data:", {
+        ...formData,
+        price_per_month,
+        capacity,
+      });
 
       const response = await fetch("/api/mess-groups", {
         method: "POST",
@@ -140,43 +156,45 @@ export default function CreateMessGroupPage() {
           location: formData.location,
           category: formData.category,
           description: formData.description,
-          single_seats: Number.parseInt(formData.single_seats) || 0,
-          single_price: Number.parseFloat(formData.single_price) || 0,
-          double_seats: Number.parseInt(formData.double_seats) || 0,
-          double_price: Number.parseFloat(formData.double_price) || 0,
+          single_seats: singleSeats,
+          single_price: singlePrice,
+          double_seats: doubleSeats,
+          double_price: doublePrice,
+          price_per_month,
+          capacity,
           contact_phone: formData.contact_phone,
           contact_email: formData.contact_email,
           address: formData.address,
           amenities: formData.amenities,
         }),
-      })
+      });
 
-      const responseText = await response.text()
-      console.log("Frontend: Raw response:", responseText.substring(0, 200))
+      const responseText = await response.text();
+      console.log("Frontend: Raw response:", responseText.substring(0, 200));
 
-      let data
+      let data;
       try {
-        data = JSON.parse(responseText)
+        data = JSON.parse(responseText);
       } catch (parseError) {
-        console.error("Frontend: JSON parse error:", parseError)
-        throw new Error(`Invalid response: ${responseText.substring(0, 100)}`)
+        console.error("Frontend: JSON parse error:", parseError);
+        throw new Error(`Invalid response: ${responseText.substring(0, 100)}`);
       }
 
       if (!data.success) {
-        throw new Error(data.error || "Failed to create mess group")
+        throw new Error(data.error || "Failed to create mess group");
       }
 
-      setSuccess("Mess group created successfully! Redirecting to dashboard...")
+      setSuccess("Mess group created successfully! Redirecting to dashboard...");
 
       // Redirect to dashboard after a short delay
       setTimeout(() => {
-        router.push("/admin/dashboard")
-      }, 2000)
+        router.push("/admin/dashboard");
+      }, 2000);
     } catch (error: any) {
-      console.error("Frontend: Error creating mess group:", error)
-      setError(error.message || "Failed to create mess group")
+      console.error("Frontend: Error creating mess group:", error);
+      setError(error.message || "Failed to create mess group");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -534,7 +552,7 @@ export default function CreateMessGroupPage() {
           <Separator className="bg-slate-700 mb-6" />
           <p className="text-slate-400 mb-2">&copy; 2025 HSTU Mess Finder. All rights reserved.</p>
           <p className="text-slate-500">
-            Developed with ❤️ by <span className="text-orange-400 font-medium">Samiul Islam Sami</span>
+            Developed with ❤️ by <span className="text-orange-400 font-medium">Ashik HentaiSami</span>
           </p>
         </div>
       </footer>
