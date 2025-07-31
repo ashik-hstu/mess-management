@@ -316,9 +316,9 @@ export default function AdminDashboard() {
             <p className="text-slate-600">Loading your mess listings...</p>
           </div>
         ) : messGroups.length > 0 ? (
-          <div className="grid gap-6">
+          <div className="grid gap-6 max-w-160 overflow-x-scroll">
             {messGroups.map((mess) => (
-              <Card key={mess.id} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <Card key={mess.id} className="border-0  shadow-lg hover:shadow-xl transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-4">
                     <div>
