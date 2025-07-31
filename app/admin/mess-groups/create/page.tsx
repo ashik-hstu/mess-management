@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,31 +11,45 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ArrowLeft, Building2, Users, Phone, Mail, Home, Plus, X, Loader2 } from "lucide-react"
+import { Building2, MapPin, Users, Bed, DollarSign, Phone, Mail, Home, ArrowLeft, Loader2, Plus, X } from "lucide-react"
 
-const AMENITIES_OPTIONS = [
+interface User {
+  id: number
+  name: string
+  email: string
+  mobile?: string
+  role: string
+}
+
+const availableAmenities = [
   "WiFi",
-  "24/7 Security",
-  "Laundry",
-  "Study Room",
-  "Common Room",
-  "Parking",
+  "AC",
   "Generator",
+  "Parking",
+  "24/7 Security",
   "CCTV",
-  "Common Kitchen",
+  "Laundry",
+  "Common Room",
+  "Study Room",
+  "Library",
   "Garden",
+  "Gym",
+  "Common Kitchen",
+  "Balcony",
   "Female Caretaker",
   "Female Security",
 ]
 
-export default function CreateMessGroup() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
-  const [success, setSuccess] = useState("")
+const locations = [
+  { value: "mohabolipur", label: "Mohabolipur" },
+  { value: "bcs-gali", label: "BCS Gali" },
+  { value: "kornai", label: "Kornai" },
+]
 
+export default function CreateMessGroup() {
+  const [user, setUser] = useState<User | null>(null)
   const [formData, setFormData] = useState({
     name: "",
     location: "",
@@ -49,30 +63,35 @@ export default function CreateMessGroup() {
     contact_email: "",
     address: "",
   })
-
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([])
-  const [customAmenity, setCustomAmenity] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
+  const router = useRouter()
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
+  useEffect(() => {
+    // Check authentication
+    const token = localStorage.getItem("token")
+    const userData = localStorage.getItem("user")
 
-  const addAmenity = (amenity: string) => {
-    if (amenity && !selectedAmenities.includes(amenity)) {
-      setSelectedAmenities((prev) => [...prev, amenity])
+    if (!token || !userData) {
+      router.push("/owner/login")
+      return
     }
-  }
 
-  const removeAmenity = (amenity: string) => {
-    setSelectedAmenities((prev) => prev.filter((a) => a !== amenity))
-  }
-
-  const addCustomAmenity = () => {
-    if (customAmenity.trim()) {
-      addAmenity(customAmenity.trim())
-      setCustomAmenity("")
+    try {
+      const parsedUser = JSON.parse(userData)
+      setUser(parsedUser)
+      // Pre-fill contact info
+      setFormData((prev) => ({
+        ...prev,
+        contact_email: parsedUser.email,
+        contact_phone: parsedUser.mobile || "",
+      }))
+    } catch (error) {
+      router.push("/owner/login")
     }
-  }
+  }, [router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,13 +99,13 @@ export default function CreateMessGroup() {
     setError("")
     setSuccess("")
 
-    try {
-      const token = localStorage.getItem("token")
-      if (!token) {
-        router.push("/owner/login")
-        return
-      }
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.push("/owner/login")
+      return
+    }
 
+    try {
       const response = await fetch("/api/mess-groups", {
         method: "POST",
         headers: {
@@ -96,9 +115,9 @@ export default function CreateMessGroup() {
         body: JSON.stringify({
           ...formData,
           single_seats: Number.parseInt(formData.single_seats) || 0,
-          single_price: Number.parseInt(formData.single_price) || 0,
+          single_price: Number.parseFloat(formData.single_price) || 0,
           double_seats: Number.parseInt(formData.double_seats) || 0,
-          double_price: Number.parseInt(formData.double_price) || 0,
+          double_price: Number.parseFloat(formData.double_price) || 0,
           amenities: selectedAmenities,
         }),
       })
@@ -109,16 +128,37 @@ export default function CreateMessGroup() {
         throw new Error(data.error || "Failed to create mess group")
       }
 
-      setSuccess("Mess group created successfully! Redirecting...")
-
+      setSuccess("Mess group created successfully!")
       setTimeout(() => {
         router.push("/admin/dashboard")
       }, 2000)
     } catch (error: any) {
-      setError(error.message || "Failed to create mess group")
+      setError(error.message || "An error occurred while creating the mess group")
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    })
+  }
+
+  const handleAmenityToggle = (amenity: string) => {
+    setSelectedAmenities((prev) => (prev.includes(amenity) ? prev.filter((a) => a !== amenity) : [...prev, amenity]))
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -153,71 +193,93 @@ export default function CreateMessGroup() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-4xl font-bold text-slate-800 mb-2">Create New Mess Group</h1>
-            <p className="text-lg text-slate-600">Add a new mess accommodation to your listings</p>
+            <p className="text-lg text-slate-600">Add your mess facility to connect with students</p>
           </div>
 
-          {error && (
-            <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {success && (
-            <Alert className="border-green-200 bg-green-50 text-green-800 mb-6">
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
-          )}
-
+          {/* Form */}
           <Card className="border-0 shadow-xl">
             <CardHeader>
               <CardTitle className="flex items-center text-2xl">
                 <Building2 className="w-6 h-6 mr-3" />
                 Mess Information
               </CardTitle>
-              <CardDescription>Provide detailed information about your mess facility</CardDescription>
+              <CardDescription>Fill in the details about your mess facility</CardDescription>
             </CardHeader>
+
             <CardContent>
+              {error && (
+                <Alert className="mb-6 border-red-200 bg-red-50">
+                  <AlertDescription className="text-red-700">{error}</AlertDescription>
+                </Alert>
+              )}
+
+              {success && (
+                <Alert className="mb-6 border-green-200 bg-green-50">
+                  <AlertDescription className="text-green-700">{success}</AlertDescription>
+                </Alert>
+              )}
+
               <form onSubmit={handleSubmit} className="space-y-8">
                 {/* Basic Information */}
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label htmlFor="name" className="text-base font-medium">
                       Mess Name *
                     </Label>
-                    <Input
-                      id="name"
-                      required
-                      value={formData.name}
-                      onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="e.g., Royal Palace Mess"
-                      className="h-12"
-                      disabled={loading}
-                    />
+                    <div className="relative">
+                      <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Input
+                        id="name"
+                        name="name"
+                        type="text"
+                        required
+                        value={formData.name}
+                        onChange={handleChange}
+                        className="pl-12 h-12"
+                        placeholder="Enter mess name"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label htmlFor="location" className="text-base font-medium">
                       Location *
                     </Label>
-                    <Select onValueChange={(value) => handleInputChange("location", value)} disabled={loading}>
+                    <Select
+                      value={formData.location}
+                      onValueChange={(value) => setFormData({ ...formData, location: value })}
+                    >
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Select location" />
+                        <div className="flex items-center">
+                          <MapPin className="w-5 h-5 text-slate-400 mr-3" />
+                          <SelectValue placeholder="Select location" />
+                        </div>
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="mohabolipur">Mohabolipur</SelectItem>
-                        <SelectItem value="bcs-gali">BCS Gali</SelectItem>
-                        <SelectItem value="kornai">Kornai</SelectItem>
+                        {locations.map((location) => (
+                          <SelectItem key={location.value} value={location.value}>
+                            {location.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
 
-                  <div className="space-y-3">
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
                     <Label htmlFor="category" className="text-base font-medium">
                       Category *
                     </Label>
-                    <Select onValueChange={(value) => handleInputChange("category", value)} disabled={loading}>
+                    <Select
+                      value={formData.category}
+                      onValueChange={(value) => setFormData({ ...formData, category: value })}
+                    >
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Select category" />
+                        <div className="flex items-center">
+                          <Users className="w-5 h-5 text-slate-400 mr-3" />
+                          <SelectValue placeholder="Select category" />
+                        </div>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="boys">Boys</SelectItem>
@@ -226,235 +288,236 @@ export default function CreateMessGroup() {
                     </Select>
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <Label htmlFor="address" className="text-base font-medium">
                       Address
                     </Label>
                     <Input
                       id="address"
+                      name="address"
+                      type="text"
                       value={formData.address}
-                      onChange={(e) => handleInputChange("address", e.target.value)}
-                      placeholder="Full address"
+                      onChange={handleChange}
                       className="h-12"
-                      disabled={loading}
+                      placeholder="Enter full address"
                     />
                   </div>
                 </div>
 
-                {/* Description */}
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <Label htmlFor="description" className="text-base font-medium">
-                    Description *
+                    Description
                   </Label>
                   <Textarea
                     id="description"
-                    required
+                    name="description"
                     value={formData.description}
-                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    onChange={handleChange}
+                    className="min-h-24"
                     placeholder="Describe your mess facility, amenities, and what makes it special..."
-                    className="min-h-[120px]"
-                    disabled={loading}
                   />
                 </div>
 
-                {/* Seat Information */}
-                <div className="grid md:grid-cols-2 gap-8">
-                  <Card className="bg-blue-50 border-blue-200">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg flex items-center">
-                        <Users className="w-5 h-5 mr-2" />
-                        Single Seats
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="single_seats">Number of Seats</Label>
-                        <Input
-                          id="single_seats"
-                          type="number"
-                          min="0"
-                          value={formData.single_seats}
-                          onChange={(e) => handleInputChange("single_seats", e.target.value)}
-                          placeholder="0"
-                          disabled={loading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="single_price">Price per Month (৳)</Label>
-                        <Input
-                          id="single_price"
-                          type="number"
-                          min="0"
-                          value={formData.single_price}
-                          onChange={(e) => handleInputChange("single_price", e.target.value)}
-                          placeholder="0"
-                          disabled={loading}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Pricing and Capacity */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-slate-800 flex items-center">
+                    <Bed className="w-5 h-5 mr-2" />
+                    Pricing & Capacity
+                  </h3>
 
-                  <Card className="bg-green-50 border-green-200">
-                    <CardHeader className="pb-4">
-                      <CardTitle className="text-lg flex items-center">
-                        <Users className="w-5 h-5 mr-2" />
-                        Double Seats
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="double_seats">Number of Seats</Label>
-                        <Input
-                          id="double_seats"
-                          type="number"
-                          min="0"
-                          value={formData.double_seats}
-                          onChange={(e) => handleInputChange("double_seats", e.target.value)}
-                          placeholder="0"
-                          disabled={loading}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="double_price">Price per Person (৳)</Label>
-                        <Input
-                          id="double_price"
-                          type="number"
-                          min="0"
-                          value={formData.double_price}
-                          onChange={(e) => handleInputChange("double_price", e.target.value)}
-                          placeholder="0"
-                          disabled={loading}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <Card className="border border-blue-200 bg-blue-50/50">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg text-blue-800">Single Occupancy</CardTitle>
+                        <CardDescription>Private rooms for individual students</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="single_seats" className="text-sm font-medium">
+                            Number of Seats
+                          </Label>
+                          <Input
+                            id="single_seats"
+                            name="single_seats"
+                            type="number"
+                            min="0"
+                            value={formData.single_seats}
+                            onChange={handleChange}
+                            className="h-10"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="single_price" className="text-sm font-medium">
+                            Price per Month (৳)
+                          </Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input
+                              id="single_price"
+                              name="single_price"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.single_price}
+                              onChange={handleChange}
+                              className="pl-10 h-10"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
 
-                {/* Contact Information */}
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <Label htmlFor="contact_phone" className="text-base font-medium">
-                      Contact Phone
-                    </Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input
-                        id="contact_phone"
-                        type="tel"
-                        value={formData.contact_phone}
-                        onChange={(e) => handleInputChange("contact_phone", e.target.value)}
-                        placeholder="01XXXXXXXXX"
-                        className="pl-10 h-12"
-                        disabled={loading}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="contact_email" className="text-base font-medium">
-                      Contact Email
-                    </Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                      <Input
-                        id="contact_email"
-                        type="email"
-                        value={formData.contact_email}
-                        onChange={(e) => handleInputChange("contact_email", e.target.value)}
-                        placeholder="contact@mess.com"
-                        className="pl-10 h-12"
-                        disabled={loading}
-                      />
-                    </div>
+                    <Card className="border border-green-200 bg-green-50/50">
+                      <CardHeader className="pb-4">
+                        <CardTitle className="text-lg text-green-800">Double Occupancy</CardTitle>
+                        <CardDescription>Shared rooms for two students</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="double_seats" className="text-sm font-medium">
+                            Number of Seats
+                          </Label>
+                          <Input
+                            id="double_seats"
+                            name="double_seats"
+                            type="number"
+                            min="0"
+                            value={formData.double_seats}
+                            onChange={handleChange}
+                            className="h-10"
+                            placeholder="0"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="double_price" className="text-sm font-medium">
+                            Price per Person/Month (৳)
+                          </Label>
+                          <div className="relative">
+                            <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                            <Input
+                              id="double_price"
+                              name="double_price"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={formData.double_price}
+                              onChange={handleChange}
+                              className="pl-10 h-10"
+                              placeholder="0.00"
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 </div>
 
                 {/* Amenities */}
                 <div className="space-y-4">
-                  <Label className="text-base font-medium">Amenities</Label>
-
-                  {/* Selected Amenities */}
-                  {selectedAmenities.length > 0 && (
-                    <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-lg">
-                      {selectedAmenities.map((amenity) => (
-                        <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
+                  <h3 className="text-xl font-semibold text-slate-800">Amenities & Facilities</h3>
+                  <p className="text-slate-600">Select all amenities available at your mess</p>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {availableAmenities.map((amenity) => (
+                      <div key={amenity} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={amenity}
+                          checked={selectedAmenities.includes(amenity)}
+                          onCheckedChange={() => handleAmenityToggle(amenity)}
+                        />
+                        <Label htmlFor={amenity} className="text-sm font-medium cursor-pointer">
                           {amenity}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                  {selectedAmenities.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-4">
+                      {selectedAmenities.map((amenity) => (
+                        <div
+                          key={amenity}
+                          className="flex items-center gap-2 bg-orange-100 text-orange-800 px-3 py-1 rounded-full text-sm"
+                        >
+                          <span>{amenity}</span>
                           <button
                             type="button"
-                            onClick={() => removeAmenity(amenity)}
-                            className="ml-1 hover:bg-slate-300 rounded-full p-0.5"
-                            disabled={loading}
+                            onClick={() => handleAmenityToggle(amenity)}
+                            className="hover:bg-orange-200 rounded-full p-1"
                           >
                             <X className="w-3 h-3" />
                           </button>
-                        </Badge>
+                        </div>
                       ))}
                     </div>
                   )}
+                </div>
 
-                  {/* Available Amenities */}
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {AMENITIES_OPTIONS.filter((amenity) => !selectedAmenities.includes(amenity)).map((amenity) => (
-                      <Button
-                        key={amenity}
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addAmenity(amenity)}
-                        className="justify-start h-auto py-2 px-3 text-sm"
-                        disabled={loading}
-                      >
-                        <Plus className="w-3 h-3 mr-2" />
-                        {amenity}
-                      </Button>
-                    ))}
-                  </div>
+                {/* Contact Information */}
+                <div className="space-y-6">
+                  <h3 className="text-xl font-semibold text-slate-800">Contact Information</h3>
+                  <div className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_phone" className="text-base font-medium">
+                        Contact Phone
+                      </Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input
+                          id="contact_phone"
+                          name="contact_phone"
+                          type="tel"
+                          value={formData.contact_phone}
+                          onChange={handleChange}
+                          className="pl-12 h-12"
+                          placeholder="Enter contact number"
+                        />
+                      </div>
+                    </div>
 
-                  {/* Custom Amenity */}
-                  <div className="flex gap-2">
-                    <Input
-                      value={customAmenity}
-                      onChange={(e) => setCustomAmenity(e.target.value)}
-                      placeholder="Add custom amenity..."
-                      className="flex-1"
-                      disabled={loading}
-                      onKeyPress={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault()
-                          addCustomAmenity()
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={addCustomAmenity}
-                      disabled={loading || !customAmenity.trim()}
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="contact_email" className="text-base font-medium">
+                        Contact Email
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-slate-400" />
+                        <Input
+                          id="contact_email"
+                          name="contact_email"
+                          type="email"
+                          value={formData.contact_email}
+                          onChange={handleChange}
+                          className="pl-12 h-12"
+                          placeholder="Enter contact email"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
 
                 {/* Submit Button */}
                 <div className="flex justify-end gap-4 pt-6 border-t">
                   <Link href="/admin/dashboard">
-                    <Button type="button" variant="outline" disabled={loading}>
+                    <Button type="button" variant="outline" size="lg">
                       Cancel
                     </Button>
                   </Link>
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white px-8"
+                    size="lg"
+                    className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 shadow-lg hover:shadow-xl transition-all duration-300"
                   >
                     {loading ? (
                       <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                         Creating...
                       </>
                     ) : (
-                      "Create Mess Group"
+                      <>
+                        <Plus className="w-5 h-5 mr-2" />
+                        Create Mess Group
+                      </>
                     )}
                   </Button>
                 </div>

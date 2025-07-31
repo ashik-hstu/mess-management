@@ -4,39 +4,50 @@ import { verifyPassword, generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { mobile, password } = await request.json()
+    const { email, password } = await request.json()
 
     // Validate required fields
-    if (!mobile || !password) {
-      return NextResponse.json({ error: "Mobile and password are required" }, { status: 400 })
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    // Find user by mobile
-    const users = await sql`
-      SELECT id, name, email, mobile, password, location, role, created_at
+    // Find user by email
+    const result = await sql`
+      SELECT id, name, email, mobile, password_hash, role, is_active
       FROM users 
-      WHERE mobile = ${mobile}
+      WHERE email = ${email}
     `
 
-    if (users.length === 0) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+    if (result.length === 0) {
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
-    const user = users[0]
+    const user = result[0]
+
+    // Check if user is active
+    if (!user.is_active) {
+      return NextResponse.json({ error: "Account is deactivated" }, { status: 401 })
+    }
 
     // Verify password
-    const isValidPassword = await verifyPassword(password, user.password)
+    const isValidPassword = await verifyPassword(password, user.password_hash)
+
     if (!isValidPassword) {
-      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 })
+      return NextResponse.json({ error: "Invalid email or password" }, { status: 401 })
     }
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user
-    const token = generateToken(userWithoutPassword)
+    // Generate token
+    const token = generateToken(user.id, user.email)
 
     return NextResponse.json({
       message: "Login successful",
-      user: userWithoutPassword,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+      },
       token,
     })
   } catch (error) {

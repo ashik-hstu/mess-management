@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -126,6 +127,9 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
       ? { gradient: "from-blue-600 to-cyan-600", bg: "from-blue-50 to-cyan-50" }
       : { gradient: "from-pink-600 to-rose-600", bg: "from-pink-50 to-rose-50" }
 
+  const buildingImage =
+    messGroup.category === "boys" ? "/images/boys-mess-building.png" : "/images/girls-mess-building.png"
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
       {/* Navigation */}
@@ -151,10 +155,16 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
         </div>
       </nav>
 
-      {/* Hero Header */}
-      <div className={`relative overflow-hidden bg-gradient-to-r ${colorClasses.gradient}`}>
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative container mx-auto px-4 py-16">
+      {/* Hero Header with Building Image */}
+      <div className="relative overflow-hidden h-96">
+        <Image
+          src={buildingImage || "/placeholder.svg"}
+          alt={`${messGroup.name} Building`}
+          fill
+          className="object-cover"
+        />
+        <div className={`absolute inset-0 bg-gradient-to-r ${colorClasses.gradient} bg-opacity-80`}></div>
+        <div className="relative container mx-auto px-4 py-16 h-full flex flex-col justify-center">
           <div className="max-w-4xl">
             <div className="flex items-center gap-4 mb-4">
               <Badge variant="secondary" className="bg-white/20 text-white border-white/30">
@@ -238,6 +248,70 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Facility Images */}
+            <Card className="border-0 shadow-lg">
+              <CardHeader>
+                <CardTitle className="text-2xl">Facility Gallery</CardTitle>
+                <CardDescription>Take a virtual tour of our premium facilities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div className="relative h-48 rounded-lg overflow-hidden group">
+                    <Image
+                      src="/images/mess-inner-view.jpg"
+                      alt="Room Interior"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white font-semibold text-lg">Comfortable Rooms</h3>
+                      <p className="text-white/90 text-sm">Well-furnished living spaces</p>
+                    </div>
+                  </div>
+                  <div className="relative h-48 rounded-lg overflow-hidden group">
+                    <Image
+                      src="/images/kitchen.jpg"
+                      alt="Kitchen Facilities"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white font-semibold text-lg">Modern Kitchen</h3>
+                      <p className="text-white/90 text-sm">Hygienic food preparation</p>
+                    </div>
+                  </div>
+                  <div className="relative h-48 rounded-lg overflow-hidden group">
+                    <Image
+                      src="/images/washroom.jpg"
+                      alt="Washroom Facilities"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white font-semibold text-lg">Clean Washrooms</h3>
+                      <p className="text-white/90 text-sm">Sanitized facilities</p>
+                    </div>
+                  </div>
+                  <div className="relative h-48 rounded-lg overflow-hidden group">
+                    <Image
+                      src="/images/priom-building.jpg"
+                      alt="Building Exterior"
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <h3 className="text-white font-semibold text-lg">Modern Building</h3>
+                      <p className="text-white/90 text-sm">Contemporary architecture</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Amenities */}
             {messGroup.amenities && messGroup.amenities.length > 0 && (

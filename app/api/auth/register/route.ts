@@ -4,38 +4,47 @@ import { hashPassword, generateToken } from "@/lib/auth"
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, mobile, password, location } = await request.json()
+    const { name, email, mobile, password } = await request.json()
 
     // Validate required fields
-    if (!name || !email || !mobile || !password || !location) {
-      return NextResponse.json({ error: "All fields are required" }, { status: 400 })
+    if (!name || !email || !password) {
+      return NextResponse.json({ error: "Name, email, and password are required" }, { status: 400 })
     }
 
     // Check if user already exists
     const existingUser = await sql`
-      SELECT id FROM users WHERE email = ${email} OR mobile = ${mobile}
+      SELECT id FROM users WHERE email = ${email}
     `
 
     if (existingUser.length > 0) {
-      return NextResponse.json({ error: "User with this email or mobile already exists" }, { status: 400 })
+      return NextResponse.json({ error: "User with this email already exists" }, { status: 409 })
     }
 
     // Hash password
-    const hashedPassword = await hashPassword(password)
+    const passwordHash = await hashPassword(password)
 
     // Create user
-    const newUser = await sql`
-      INSERT INTO users (name, email, mobile, password, location, role)
-      VALUES (${name}, ${email}, ${mobile}, ${hashedPassword}, ${location}, 'owner')
-      RETURNING id, name, email, mobile, location, role, created_at
+    const result = await sql`
+      INSERT INTO users (name, email, mobile, password_hash)
+      VALUES (${name}, ${email}, ${mobile || null}, ${passwordHash})
+      RETURNING id, name, email, mobile, role, created_at
     `
 
-    const user = newUser[0]
-    const token = generateToken(user)
+    const user = result[0]
+
+    // Generate token
+    const token = generateToken(user.id, user.email)
 
     return NextResponse.json({
       message: "User registered successfully",
-      user,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        mobile: user.mobile,
+        role: user.role,
+        created_at: user.created_at,
+      },
       token,
     })
   } catch (error) {

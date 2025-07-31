@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -65,7 +66,22 @@ export default function HomePage() {
         {/* Main Selection Cards */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
           {/* Boys Section */}
-          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-blue-50 to-cyan-50">
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-blue-50 to-cyan-50 overflow-hidden">
+            <div className="relative h-64 overflow-hidden">
+              <Image
+                src="/images/boys-mess-building.png"
+                alt="Boys Mess Building"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 mb-2">
+                  <Building2 className="w-4 h-4 mr-1" />
+                  Premium Facilities
+                </Badge>
+              </div>
+            </div>
             <CardHeader className="text-center pb-4">
               <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-12 h-12 text-white" />
@@ -109,7 +125,22 @@ export default function HomePage() {
           </Card>
 
           {/* Girls Section */}
-          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-pink-50 to-rose-50">
+          <Card className="group hover:shadow-2xl transition-all duration-300 border-0 shadow-lg bg-gradient-to-br from-pink-50 to-rose-50 overflow-hidden">
+            <div className="relative h-64 overflow-hidden">
+              <Image
+                src="/images/girls-mess-building.png"
+                alt="Girls Mess Building"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+              <div className="absolute bottom-4 left-4 right-4">
+                <Badge variant="secondary" className="bg-white/20 text-white border-white/30 mb-2">
+                  <Shield className="w-4 h-4 mr-1" />
+                  Safe & Secure
+                </Badge>
+              </div>
+            </div>
             <CardHeader className="text-center pb-4">
               <div className="w-24 h-24 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Users className="w-12 h-12 text-white" />
@@ -151,6 +182,63 @@ export default function HomePage() {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Featured Facilities Section */}
+        <div className="mb-16">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-slate-800 mb-4">Premium Facilities</h2>
+            <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+              Experience world-class amenities designed for student comfort and convenience
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden">
+              <div className="relative h-48 overflow-hidden">
+                <Image
+                  src="/images/mess-inner-view.jpg"
+                  alt="Comfortable Living Spaces"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h3 className="text-white font-semibold text-lg">Comfortable Rooms</h3>
+                  <p className="text-white/90 text-sm">Modern furnished accommodations</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden">
+              <div className="relative h-48 overflow-hidden">
+                <Image
+                  src="/images/kitchen.jpg"
+                  alt="Modern Kitchen Facilities"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h3 className="text-white font-semibold text-lg">Modern Kitchen</h3>
+                  <p className="text-white/90 text-sm">Hygienic food preparation areas</p>
+                </div>
+              </div>
+            </Card>
+            <Card className="group hover:shadow-xl transition-all duration-300 border-0 shadow-lg overflow-hidden">
+              <div className="relative h-48 overflow-hidden">
+                <Image
+                  src="/images/washroom.jpg"
+                  alt="Clean Washroom Facilities"
+                  fill
+                  className="object-cover group-hover:scale-105 transition-transform duration-300"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <h3 className="text-white font-semibold text-lg">Clean Washrooms</h3>
+                  <p className="text-white/90 text-sm">Sanitized bathroom facilities</p>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
 
         {/* About Section */}

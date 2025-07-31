@@ -6,15 +6,13 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Home, Plus, Building2, Users, MapPin, Star, LogOut, Edit, Eye } from "lucide-react"
+import { Building2, Users, Plus, Home, LogOut, Star, MapPin, Bed, TrendingUp, Eye, Edit, Loader2 } from "lucide-react"
 
 interface User {
   id: number
   name: string
   email: string
-  mobile: string
-  location: string
+  mobile?: string
   role: string
 }
 
@@ -38,11 +36,11 @@ interface MessGroup {
 }
 
 export default function AdminDashboard() {
-  const router = useRouter()
   const [user, setUser] = useState<User | null>(null)
   const [messGroups, setMessGroups] = useState<MessGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const router = useRouter()
 
   useEffect(() => {
     // Check authentication
@@ -65,6 +63,7 @@ export default function AdminDashboard() {
 
   const fetchMessGroups = async (token: string) => {
     try {
+      setLoading(true)
       const response = await fetch("/api/mess-groups", {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -90,20 +89,24 @@ export default function AdminDashboard() {
     router.push("/")
   }
 
-  if (loading) {
+  if (!user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
+          <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
           <p className="text-slate-600">Loading dashboard...</p>
         </div>
       </div>
     )
   }
 
-  if (!user) {
-    return null
-  }
+  const totalSeats = messGroups.reduce((sum, mess) => sum + mess.single_seats + mess.double_seats, 0)
+  const averageRating =
+    messGroups.length > 0 ? messGroups.reduce((sum, mess) => sum + mess.rating, 0) / messGroups.length : 0
+  const totalRevenue = messGroups.reduce(
+    (sum, mess) => sum + mess.single_seats * mess.single_price + mess.double_seats * mess.double_price,
+    0,
+  )
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -115,9 +118,7 @@ export default function AdminDashboard() {
               HSTU Mess Finder
             </Link>
             <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="bg-orange-100 text-orange-700">
-                {user.name}
-              </Badge>
+              <span className="text-slate-600">Welcome, {user.name}</span>
               <Link href="/">
                 <Button variant="outline" size="sm">
                   <Home className="w-4 h-4 mr-2" />
@@ -137,17 +138,11 @@ export default function AdminDashboard() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-800 mb-2">Admin Dashboard</h1>
-          <p className="text-lg text-slate-600">Manage your mess listings and view analytics</p>
+          <p className="text-lg text-slate-600">Manage your mess listings and track performance</p>
         </div>
 
-        {error && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-blue-50 to-cyan-50">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -167,12 +162,24 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-600">Total Seats</p>
-                  <p className="text-3xl font-bold text-slate-800">
-                    {messGroups.reduce((acc, mess) => acc + mess.single_seats + mess.double_seats, 0)}
-                  </p>
+                  <p className="text-3xl font-bold text-slate-800">{totalSeats}</p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Users className="w-6 h-6 text-green-600" />
+                  <Bed className="w-6 h-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-yellow-50 to-orange-50">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600">Average Rating</p>
+                  <p className="text-3xl font-bold text-slate-800">{averageRating.toFixed(1)}</p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+                  <Star className="w-6 h-6 text-yellow-600" />
                 </div>
               </div>
             </CardContent>
@@ -182,15 +189,11 @@ export default function AdminDashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-600">Average Rating</p>
-                  <p className="text-3xl font-bold text-slate-800">
-                    {messGroups.length > 0
-                      ? (messGroups.reduce((acc, mess) => acc + mess.rating, 0) / messGroups.length).toFixed(1)
-                      : "0.0"}
-                  </p>
+                  <p className="text-sm font-medium text-slate-600">Monthly Revenue</p>
+                  <p className="text-3xl font-bold text-slate-800">৳{totalRevenue.toLocaleString()}</p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Star className="w-6 h-6 text-purple-600" />
+                  <TrendingUp className="w-6 h-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -199,118 +202,124 @@ export default function AdminDashboard() {
 
         {/* Actions */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-800">Your Mess Groups</h2>
+          <h2 className="text-2xl font-bold text-slate-800">Your Mess Listings</h2>
           <Link href="/admin/mess-groups/create">
-            <Button className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg hover:shadow-xl transition-all duration-300">
+            <Button className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 shadow-lg hover:shadow-xl transition-all duration-300">
               <Plus className="w-4 h-4 mr-2" />
-              Add New Mess Group
+              Add New Mess
             </Button>
           </Link>
         </div>
 
+        {/* Error Display */}
+        {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
+
         {/* Mess Groups List */}
-        {messGroups.length === 0 ? (
-          <Card className="border-0 shadow-lg">
-            <CardContent className="p-12 text-center">
-              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-10 h-10 text-slate-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-slate-800 mb-2">No Mess Groups Yet</h3>
-              <p className="text-slate-600 mb-6">Create your first mess group to start managing accommodations</p>
-              <Link href="/admin/mess-groups/create">
-                <Button className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Mess Group
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
+        {loading ? (
+          <div className="text-center py-12">
+            <Loader2 className="w-12 h-12 animate-spin text-orange-600 mx-auto mb-4" />
+            <p className="text-slate-600">Loading mess groups...</p>
+          </div>
+        ) : messGroups.length > 0 ? (
           <div className="grid gap-6">
             {messGroups.map((mess) => (
-              <Card key={mess.id} className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+              <Card key={mess.id} className="border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                 <CardContent className="p-6">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-slate-800">{mess.name}</h3>
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800 mb-2">{mess.name}</h3>
+                      <div className="flex items-center gap-4 text-sm text-slate-600">
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-4 h-4" />
+                          <span>{mess.location.charAt(0).toUpperCase() + mess.location.slice(1)}</span>
+                        </div>
                         <Badge
                           variant="secondary"
                           className={`${
                             mess.category === "boys" ? "bg-blue-100 text-blue-700" : "bg-pink-100 text-pink-700"
                           }`}
                         >
-                          {mess.category}
+                          {mess.category.charAt(0).toUpperCase() + mess.category.slice(1)}
                         </Badge>
-                        <Badge variant="outline" className="bg-slate-50">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {mess.location}
-                        </Badge>
-                      </div>
-                      <p className="text-slate-600 mb-4 line-clamp-2">{mess.description}</p>
-
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                        <div className="text-center p-3 bg-slate-50 rounded-lg">
-                          <p className="text-sm text-slate-600">Single Seats</p>
-                          <p className="text-lg font-bold text-slate-800">{mess.single_seats}</p>
-                          <p className="text-sm text-slate-500">৳{mess.single_price}</p>
-                        </div>
-                        <div className="text-center p-3 bg-slate-50 rounded-lg">
-                          <p className="text-sm text-slate-600">Double Seats</p>
-                          <p className="text-lg font-bold text-slate-800">{mess.double_seats}</p>
-                          <p className="text-sm text-slate-500">৳{mess.double_price}</p>
-                        </div>
-                        <div className="text-center p-3 bg-slate-50 rounded-lg">
-                          <p className="text-sm text-slate-600">Rating</p>
-                          <div className="flex items-center justify-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                            <p className="text-lg font-bold text-slate-800">{mess.rating}</p>
-                          </div>
-                        </div>
-                        <div className="text-center p-3 bg-slate-50 rounded-lg">
-                          <p className="text-sm text-slate-600">Status</p>
-                          <Badge variant={mess.is_active ? "default" : "secondary"} className="mt-1">
-                            {mess.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-500 fill-current" />
+                          <span>{mess.rating}</span>
                         </div>
                       </div>
-
-                      {mess.amenities && mess.amenities.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-sm font-medium text-slate-700 mb-2">Amenities:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {mess.amenities.slice(0, 4).map((amenity, index) => (
-                              <Badge key={index} variant="outline" className="text-xs">
-                                {amenity}
-                              </Badge>
-                            ))}
-                            {mess.amenities.length > 4 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{mess.amenities.length - 4} more
-                              </Badge>
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
-
-                    <div className="flex gap-2 ml-4">
-                      <Link href={`/admin/mess-groups/${mess.id}`}>
+                    <div className="flex items-center gap-2">
+                      <Link href={`/mess/${mess.id}`}>
                         <Button variant="outline" size="sm">
-                          <Eye className="w-4 h-4" />
+                          <Eye className="w-4 h-4 mr-2" />
+                          View
                         </Button>
                       </Link>
-                      <Link href={`/admin/mess-groups/${mess.id}/edit`}>
-                        <Button variant="outline" size="sm">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </Link>
+                      <Button variant="outline" size="sm">
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </Button>
                     </div>
                   </div>
+
+                  <p className="text-slate-600 mb-4 line-clamp-2">{mess.description}</p>
+
+                  <div className="grid md:grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Bed className="w-4 h-4 text-blue-600" />
+                        <span className="font-medium text-slate-800">Single Seats</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-slate-800">{mess.single_seats} seats</div>
+                        <div className="text-sm text-slate-600">৳{mess.single_price}/month</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-green-600" />
+                        <span className="font-medium text-slate-800">Double Seats</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold text-slate-800">{mess.double_seats} seats</div>
+                        <div className="text-sm text-slate-600">৳{mess.double_price}/month</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {mess.amenities && mess.amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      {mess.amenities.slice(0, 4).map((amenity, index) => (
+                        <Badge key={index} variant="secondary" className="bg-slate-100 text-slate-700">
+                          {amenity}
+                        </Badge>
+                      ))}
+                      {mess.amenities.length > 4 && (
+                        <Badge variant="secondary" className="bg-slate-100 text-slate-700">
+                          +{mess.amenities.length - 4} more
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             ))}
           </div>
+        ) : (
+          <Card className="border-0 shadow-lg">
+            <CardContent className="text-center py-12">
+              <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-10 h-10 text-slate-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-slate-800 mb-2">No Mess Groups Yet</h3>
+              <p className="text-slate-600 mb-6">Start by creating your first mess listing to connect with students.</p>
+              <Link href="/admin/mess-groups/create">
+                <Button className="bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Your First Mess
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
         )}
       </div>
     </div>

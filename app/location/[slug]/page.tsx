@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,25 +10,40 @@ import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Search, Home, ExternalLink, Filter, MapPin, Users, Bed, DollarSign, X, Building2, Loader2 } from "lucide-react"
+import {
+  Search,
+  Home,
+  ExternalLink,
+  Filter,
+  MapPin,
+  Users,
+  Bed,
+  DollarSign,
+  X,
+  Building2,
+  Loader2,
+  AlertCircle,
+} from "lucide-react"
 
-// Mock data for different locations
+// Mock data for different locations - Updated with correct location mappings
 const messData = {
   "mohabalipur-boys": {
     title: "Mohabalipur Boys Accommodation",
     description:
       "Premium mess services in the heart of Mohabalipur area, offering comfortable living spaces for male students.",
     color: "blue",
-    location: "mohabolipur",
+    location: "mohabolipur", // This should match what's stored in database
     category: "boys",
+    image: "/images/boys-mess-building.png",
   },
   "mohabalipur-girls": {
     title: "Mohabalipur Girls Accommodation",
     description:
       "Safe and comfortable mess facilities in Mohabalipur, specially designed for female students with enhanced security.",
     color: "pink",
-    location: "mohabolipur",
+    location: "mohabolipur", // This should match what's stored in database
     category: "girls",
+    image: "/images/girls-mess-building.png",
   },
   "bcs-gali-boys": {
     title: "BCS Gali Boys Accommodation",
@@ -36,6 +52,7 @@ const messData = {
     color: "blue",
     location: "bcs-gali",
     category: "boys",
+    image: "/images/boys-mess-building.png",
   },
   "bcs-gali-girls": {
     title: "BCS Gali Girls Accommodation",
@@ -44,6 +61,7 @@ const messData = {
     color: "pink",
     location: "bcs-gali",
     category: "girls",
+    image: "/images/girls-mess-building.png",
   },
   "kornai-boys": {
     title: "Kornai Boys Accommodation",
@@ -52,6 +70,7 @@ const messData = {
     color: "blue",
     location: "kornai",
     category: "boys",
+    image: "/images/boys-mess-building.png",
   },
   "kornai-girls": {
     title: "Kornai Girls Accommodation",
@@ -59,6 +78,7 @@ const messData = {
     color: "pink",
     location: "kornai",
     category: "girls",
+    image: "/images/girls-mess-building.png",
   },
 }
 
@@ -87,6 +107,7 @@ interface MessGroup {
   created_at: string
   owner_name?: string
   owner_mobile?: string
+  owner_email?: string
 }
 
 export default function LocationPage({ params }: LocationPageProps) {
@@ -105,27 +126,48 @@ export default function LocationPage({ params }: LocationPageProps) {
     color: "blue",
     location: "",
     category: "",
+    image: "/images/boys-mess-building.png",
   }
 
   useEffect(() => {
     fetchMessGroups()
-  }, [slug])
+  }, [slug, locationData.location, locationData.category])
 
   const fetchMessGroups = async () => {
     try {
       setLoading(true)
-      const response = await fetch(
-        `/api/mess-groups?location=${locationData.location}&category=${locationData.category}`,
-      )
+      setError("")
+
+      console.log("Fetching mess groups for:", {
+        location: locationData.location,
+        category: locationData.category,
+        slug,
+      })
+
+      if (!locationData.location || !locationData.category) {
+        console.log("Missing location or category data")
+        setError("Invalid location or category")
+        setLoading(false)
+        return
+      }
+
+      const url = `/api/mess-groups?location=${encodeURIComponent(locationData.location)}&category=${encodeURIComponent(locationData.category)}`
+      console.log("Fetching from URL:", url)
+
+      const response = await fetch(url)
 
       if (!response.ok) {
-        throw new Error("Failed to fetch mess groups")
+        const errorData = await response.json()
+        throw new Error(errorData.details || errorData.error || `HTTP ${response.status}`)
       }
 
       const data = await response.json()
+      console.log("Received data:", data)
+
       setMessGroups(data.messGroups || [])
       setFilteredMesses(data.messGroups || [])
     } catch (error: any) {
+      console.error("Error fetching mess groups:", error)
       setError(error.message || "Failed to load mess groups")
     } finally {
       setLoading(false)
@@ -213,10 +255,16 @@ export default function LocationPage({ params }: LocationPageProps) {
         </div>
       </nav>
 
-      {/* Hero Header */}
-      <div className={`relative overflow-hidden bg-gradient-to-r ${colors.gradient}`}>
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative container mx-auto px-4 py-16">
+      {/* Hero Header with Image */}
+      <div className="relative overflow-hidden h-96">
+        <Image
+          src={locationData.image || "/placeholder.svg?height=400&width=800"}
+          alt={locationData.title}
+          fill
+          className="object-cover"
+        />
+        <div className={`absolute inset-0 bg-gradient-to-r ${colors.gradient} bg-opacity-80`}></div>
+        <div className="relative container mx-auto px-4 py-16 h-full flex flex-col justify-center">
           <div className="flex items-center justify-between mb-6">
             <Link href="/">
               <Button
@@ -239,7 +287,35 @@ export default function LocationPage({ params }: LocationPageProps) {
       </div>
 
       <div className="container mx-auto px-4 py-12">
-        {error && <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">{error}</div>}
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+            <div>
+              <p className="text-red-700 font-medium">Error loading mess groups</p>
+              <p className="text-red-600 text-sm">{error}</p>
+              <Button
+                onClick={fetchMessGroups}
+                variant="outline"
+                size="sm"
+                className="mt-2 border-red-300 text-red-700 hover:bg-red-50 bg-transparent"
+              >
+                Try Again
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Info (remove in production) */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <h3 className="font-medium text-blue-800 mb-2">Debug Info:</h3>
+            <p className="text-sm text-blue-700">Slug: {slug}</p>
+            <p className="text-sm text-blue-700">Location: {locationData.location}</p>
+            <p className="text-sm text-blue-700">Category: {locationData.category}</p>
+            <p className="text-sm text-blue-700">Mess Groups Found: {messGroups.length}</p>
+          </div>
+        )}
 
         {/* Search Section */}
         <Card className="mb-8 border-0 shadow-xl">
@@ -372,7 +448,7 @@ export default function LocationPage({ params }: LocationPageProps) {
                   </TableHeader>
                   <TableBody>
                     {filteredMesses.map((mess, index) => (
-                      <TableRow key={index} className="hover:bg-slate-50/50 transition-colors">
+                      <TableRow key={mess.id || index} className="hover:bg-slate-50/50 transition-colors">
                         <TableCell className="font-medium py-6">
                           <div className="text-center">
                             <div className="font-semibold text-slate-800 mb-1">{mess.name}</div>
@@ -382,33 +458,33 @@ export default function LocationPage({ params }: LocationPageProps) {
                                   <div
                                     key={i}
                                     className={`w-3 h-3 ${
-                                      i < Math.floor(mess.rating) ? "text-yellow-400" : "text-slate-300"
+                                      i < Math.floor(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
                                     }`}
                                   >
                                     ⭐
                                   </div>
                                 ))}
                               </div>
-                              <span className="text-sm text-slate-600 ml-1">{mess.rating}</span>
+                              <span className="text-sm text-slate-600 ml-1">{mess.rating || 0}</span>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-center border-l">
                           <Badge variant="secondary" className="bg-green-100 text-green-700">
-                            {mess.single_seats} seats
+                            {mess.single_seats || 0} seats
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="font-semibold text-lg text-slate-800">৳{mess.single_price}</div>
+                          <div className="font-semibold text-lg text-slate-800">৳{mess.single_price || 0}</div>
                           <div className="text-sm text-slate-500">per month</div>
                         </TableCell>
                         <TableCell className="text-center border-l">
                           <Badge variant="secondary" className="bg-blue-100 text-blue-700">
-                            {mess.double_seats} seats
+                            {mess.double_seats || 0} seats
                           </Badge>
                         </TableCell>
                         <TableCell className="text-center">
-                          <div className="font-semibold text-lg text-slate-800">৳{mess.double_price}</div>
+                          <div className="font-semibold text-lg text-slate-800">৳{mess.double_price || 0}</div>
                           <div className="text-sm text-slate-500">per month</div>
                         </TableCell>
                         <TableCell className="text-center border-l">
@@ -433,14 +509,27 @@ export default function LocationPage({ params }: LocationPageProps) {
                 <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Search className="w-10 h-10 text-slate-400" />
                 </div>
-                <h3 className="text-xl font-semibold text-slate-800 mb-2">No Results Found</h3>
+                <h3 className="text-xl font-semibold text-slate-800 mb-2">
+                  {error ? "Unable to Load Results" : "No Results Found"}
+                </h3>
                 <p className="text-slate-600 mb-6">
-                  No mess services match your current price criteria. Try adjusting your filters.
+                  {error
+                    ? "There was an error loading the mess groups. Please try again."
+                    : hasFilters
+                      ? "No mess services match your current price criteria. Try adjusting your filters."
+                      : "No mess services are currently available in this area."}
                 </p>
-                <Button onClick={resetFilters} variant="outline">
-                  <X className="w-4 h-4 mr-2" />
-                  Clear Filters
-                </Button>
+                {hasFilters && !error && (
+                  <Button onClick={resetFilters} variant="outline">
+                    <X className="w-4 h-4 mr-2" />
+                    Clear Filters
+                  </Button>
+                )}
+                {error && (
+                  <Button onClick={fetchMessGroups} variant="outline">
+                    Try Again
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
