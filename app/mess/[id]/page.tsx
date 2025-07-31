@@ -119,10 +119,19 @@ export default function MessDetailPage() {
   const [bookingError, setBookingError] = useState("");
   const [userBookings, setUserBookings] = useState<any[]>([]);
 
+  // Track booking confirmation state
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const [pendingBooking, setPendingBooking] = useState<any>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [cancelError, setCancelError] = useState("");
+
   useEffect(() => {
     if (success === "1" && orderId) {
       fetch(`/api/bookings/${orderId}/confirm`, { method: "POST" })
-        .then(() => fetchUserBookings())
+        .then(() => {
+          setBookingConfirmed(true);
+          fetchUserBookings();
+        })
         .catch(console.error);
     }
     // eslint-disable-next-line
@@ -171,9 +180,35 @@ export default function MessDetailPage() {
       const data = await response.json();
       if (data.success) {
         setUserBookings(data.data);
+        // Find a pending booking for this mess
+        const pending = data.data.find(
+          (b: any) => b.mess_group_id === parseInt(id) && b.status === 'pending'
+        );
+        setPendingBooking(pending || null);
       }
     } catch (error) {
       console.error('Error fetching user bookings:', error);
+    }
+  };
+  // Cancel pending booking handler
+  const handleCancelPending = async () => {
+    if (!pendingBooking) return;
+    setCancelLoading(true);
+    setCancelError("");
+    try {
+      const res = await fetch(`/api/bookings/${pendingBooking.id}/cancel`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || "Failed to cancel booking");
+      setPendingBooking(null);
+      fetchUserBookings();
+    } catch (err: any) {
+      setCancelError(err.message || "Failed to cancel booking");
+    } finally {
+      setCancelLoading(false);
     }
   };
 
@@ -448,17 +483,48 @@ export default function MessDetailPage() {
                 <CardTitle className="text-2xl">Pricing & Availability</CardTitle>
               </CardHeader>
               <CardContent>
-                {bookingError && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-red-600 text-sm">{bookingError}</p>
+
+                {/* Booking state UI logic */}
+                {/* 1. Booking confirmed (success) - show only history button, keep booking buttons disabled */}
+                {bookingConfirmed && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex flex-col gap-2">
+                    <p className="text-green-700 text-sm font-medium">
+                      Booking successful! You can view your booking history below.
+                    </p>
+                    <Link href="/user/history">
+                      <Button size="sm" variant="outline">Go to Booking History</Button>
+                    </Link>
                   </div>
                 )}
-                
-                {hasActiveBookingForMess() && (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+
+                {/* 2. Pending booking - show cancel button, enable booking buttons */}
+                {pendingBooking && (
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg flex flex-col gap-2">
+                    <p className="text-yellow-700 text-sm font-medium">
+                      You have a pending booking for this mess. You must clear it before making a new booking.
+                    </p>
+                    <Button size="sm" variant="destructive" onClick={handleCancelPending} disabled={cancelLoading}>
+                      {cancelLoading ? "Cancelling..." : "Cancel Pending Booking"}
+                    </Button>
+                    {cancelError && <span className="text-red-600 text-xs">{cancelError}</span>}
+                  </div>
+                )}
+
+                {/* 3. Confirmed/paid booking (not pending) - show info and history button, keep booking buttons disabled */}
+                {!pendingBooking && hasActiveBookingForMess() && !bookingConfirmed && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg flex flex-col gap-2">
                     <p className="text-blue-600 text-sm">
                       You already have an active booking for this mess. Check your booking history for details.
                     </p>
+                    <Link href="/user/history">
+                      <Button size="sm" variant="outline">Go to Booking History</Button>
+                    </Link>
+                  </div>
+                )}
+
+                {bookingError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-red-600 text-sm">{bookingError}</p>
                   </div>
                 )}
 
@@ -481,7 +547,7 @@ export default function MessDetailPage() {
                       disabled={
                         bookingLoading.single || 
                         (availableSeats?.single_available || 0) < 1 || 
-                        hasActiveBookingForMess()
+                        (!pendingBooking && hasActiveBookingForMess()) || bookingConfirmed
                       }
                       onClick={() => handleBook('single')}
                     >
@@ -492,7 +558,7 @@ export default function MessDetailPage() {
                         </>
                       ) : (availableSeats?.single_available || 0) < 1 ? (
                         'No Single Rooms Available'
-                      ) : hasActiveBookingForMess() ? (
+                      ) : (!pendingBooking && hasActiveBookingForMess()) || bookingConfirmed ? (
                         'Already Booked'
                       ) : (
                         'Book Single Room'
@@ -518,7 +584,7 @@ export default function MessDetailPage() {
                       disabled={
                         bookingLoading.double || 
                         (availableSeats?.double_available || 0) < 1 || 
-                        hasActiveBookingForMess()
+                        (!pendingBooking && hasActiveBookingForMess()) || bookingConfirmed
                       }
                       onClick={() => handleBook('double')}
                     >
@@ -529,7 +595,7 @@ export default function MessDetailPage() {
                         </>
                       ) : (availableSeats?.double_available || 0) < 1 ? (
                         'No Double Rooms Available'
-                      ) : hasActiveBookingForMess() ? (
+                      ) : (!pendingBooking && hasActiveBookingForMess()) || bookingConfirmed ? (
                         'Already Booked'
                       ) : (
                         'Book Double Room'
