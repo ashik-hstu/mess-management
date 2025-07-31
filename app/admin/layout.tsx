@@ -1,5 +1,5 @@
 "use client"
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Home, Users, List, Menu, X } from "lucide-react"
 
@@ -10,14 +10,46 @@ const navItems = [
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [isOwner, setIsOwner] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const userData = localStorage.getItem("user")
+    if (!userData) {
+      setIsOwner(false)
+      return
+    }
+    try {
+      const user = JSON.parse(userData)
+      setIsOwner(user.role === "owner")
+    } catch {
+      setIsOwner(false)
+    }
+  }, [])
+
+  if (isOwner === null) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <span className="text-2xl font-bold text-orange-600">Checking access...</span>
+        </div>
+      </div>
+    )
+  }
+  if (!isOwner) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+        <div className="text-center">
+          <span className="text-2xl font-bold text-orange-600">Access denied. Owners only.</span>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
-      {/* Top nav slot (rendered by page) */}
       <div className="flex">
         <AdminSidebar />
         <main className="flex-1 min-w-0">{children}</main>
       </div>
-      {/* Footer slot (rendered by page) */}
     </div>
   )
 }
