@@ -135,11 +135,7 @@ const features = [
   
     useEffect(() => {
       if (typeof window === "undefined") return
-      // Register service worker
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker.register("/service-worker.js")
-      }
-      // Listen for install prompt
+      // Listen for install prompt only; service worker is auto-registered by @ducanh2912/next-pwa
       const handler = (e: Event) => {
         e.preventDefault()
         setDeferredPrompt(e as BeforeInstallPromptEvent)
