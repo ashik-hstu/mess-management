@@ -168,6 +168,7 @@ const amenityIcons: { [key: string]: any } = {
   Elevator: Home,
 }
 
+import * as React from "react"
 export default function LocationPage({ params }: LocationPageProps) {
   const { slug } = params
   const [singlePriceFilter, setSinglePriceFilter] = useState("")
@@ -178,6 +179,7 @@ export default function LocationPage({ params }: LocationPageProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   const [retryCount, setRetryCount] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const locationData = messData[slug as keyof typeof messData] || {
     title: "Mess Accommodation",
@@ -371,11 +373,39 @@ export default function LocationPage({ params }: LocationPageProps) {
                   Home
                 </Button>
               </Link>
-              <Link href="/owner/login">
-                <Button variant="outline" size="sm">
-                  Login
-                </Button>
-              </Link>
+              {localStorage.getItem("user") ? (
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  >
+                    Profile
+                  </Button>
+                  {mobileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                      <Link href="/user">
+                        <Button variant="ghost" className="w-full justify-start">
+                          Profile
+                        </Button>
+                      </Link>
+                      {JSON.parse(localStorage.getItem("user") || "{}").role === "owner" && (
+                        <Link href="/admin/dashboard">
+                          <Button variant="ghost" className="w-full justify-start">
+                            Admin Dashboard
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link href="/owner/login">
+                  <Button variant="outline" size="sm">
+                    Login
+                  </Button>
+                </Link>
+              )}
             </div>
             {/* Mobile nav */}
             <div className="sm:hidden">

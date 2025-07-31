@@ -67,43 +67,64 @@ const amenityIcons: { [key: string]: any } = {
   Laundry: Users,
 }
 
+// Define MobileMenu outside of the component to avoid duplication and ensure consistency
+function MobileMenu({ open, setOpen }: { open: boolean, setOpen: (v: boolean) => void }) {
+  return (
+    <div className="relative">
+      <Button variant="outline" size="icon" onClick={() => setOpen(!open)} aria-label="Open menu">
+        {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </Button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+          <Link href="/">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+              <Home className="w-4 h-4 mr-2" /> Home
+            </Button>
+          </Link>
+          <Link href="/owner/login">
+            <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
+              Login
+            </Button>
+          </Link>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function MessDetailPage({ params }: MessDetailPageProps) {
-  // Responsive mobile menu for navigation
-  function MobileMenu() {
-    const [open, setOpen] = useState(false)
-    return (
-      <div className="relative">
-        <Button variant="outline" size="icon" onClick={() => setOpen(open => !open)} aria-label="Open menu">
-          {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </Button>
-        {open && (
-          <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
-            <Link href="/">
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-                <Home className="w-4 h-4 mr-2" /> Home
-              </Button>
-            </Link>
-            <Link href="/owner/login">
-              <Button variant="ghost" className="w-full justify-start" onClick={() => setOpen(false)}>
-                Login
-              </Button>
-            </Link>
-          </div>
-        )}
-      </div>
-    )
-  }
-  const { id } = params
-  const [messGroup, setMessGroup] = useState<MessGroup | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState("")
-  const [userRating, setUserRating] = useState<number>(0)
-  const [ratingLoading, setRatingLoading] = useState(false)
-  const [ratingError, setRatingError] = useState("")
+  const { id } = params; // Destructure id from params
+
+  const router = require('next/navigation').useRouter();
+  const [user, setUser] = useState<any>(null);
+  const [messGroup, setMessGroup] = useState<MessGroup | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [userRating, setUserRating] = useState<number>(0);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [ratingError, setRatingError] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    fetchMessGroup()
-  }, [id])
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      const currentPath = window.location.pathname;
+      router.replace(`/owner/login?redirect_back=${encodeURIComponent(currentPath)}`);
+      return;
+    }
+    try {
+      const parsedUser = JSON.parse(userData);
+      setUser(parsedUser);
+    } catch {
+      const currentPath = window.location.pathname;
+      router.replace(`/owner/login?redirect_back=${encodeURIComponent(currentPath)}`);
+    }
+  }, [router]);
+
+  useEffect(() => {
+    fetchMessGroup();
+  }, [id]);
+
   const handleStarClick = (star: number) => {
     setUserRating(star)
   }
@@ -224,15 +245,43 @@ export default function MessDetailPage({ params }: MessDetailPageProps) {
                   Home
                 </Button>
               </Link>
-              <Link href="/owner/login">
-                <Button variant="outline" size="sm">
-                  Login
-                </Button>
-              </Link>
+              {user ? (
+                <div className="relative">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                  >
+                    Profile
+                  </Button>
+                  {mobileMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                      <Link href="/user">
+                        <Button variant="ghost" className="w-full justify-start">
+                          Profile
+                        </Button>
+                      </Link>
+                      {user.role === "owner" && (
+                        <Link href="/admin/dashboard">
+                          <Button variant="ghost" className="w-full justify-start">
+                            Admin Dashboard
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Link href="/owner/login">
+                  <Button variant="outline" size="sm">
+                    Login
+                  </Button>
+                </Link>
+              )}
             </div>
             {/* Mobile nav */}
             <div className="sm:hidden">
-              <MobileMenu />
+              <MobileMenu open={mobileMenuOpen} setOpen={setMobileMenuOpen} />
             </div>
           </div>
         </div>
