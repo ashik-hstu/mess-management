@@ -24,6 +24,10 @@ import {
   Loader2,
   AlertCircle,
   RefreshCw,
+  Wifi,
+  Car,
+  Shield,
+  Zap,
 } from "lucide-react"
 
 // Location data mapping
@@ -109,6 +113,33 @@ interface MessGroup {
   owner_name?: string
   owner_mobile?: string
   owner_email?: string
+  price_per_month: number
+  capacity: number
+  available_seats: number
+  images: string[]
+}
+
+const locationNames: { [key: string]: string } = {
+  "kornai-boys": "Kornai Boys Area",
+  "kornai-girls": "Kornai Girls Area",
+  "mohabolipur-boys": "Mohabolipur Boys Area",
+  "mohabolipur-girls": "Mohabolipur Girls Area",
+  "bcs-gali-boys": "BCS Gali Boys Area",
+  "bcs-gali-girls": "BCS Gali Girls Area",
+  "priom-building-boys": "Priom Building Boys",
+  "priom-building-girls": "Priom Building Girls",
+}
+
+const amenityIcons: { [key: string]: any } = {
+  WiFi: Wifi,
+  "24/7 Security": Shield,
+  Security: Shield,
+  "Security Guard": Shield,
+  CCTV: Shield,
+  Parking: Car,
+  "Backup Generator": Zap,
+  "Backup Power": Zap,
+  Elevator: Home,
 }
 
 export default function LocationPage({ params }: LocationPageProps) {
@@ -130,6 +161,9 @@ export default function LocationPage({ params }: LocationPageProps) {
     category: "",
     image: "/images/boys-mess-building.png",
   }
+
+  const locationName = locationNames[slug] || slug
+  const isDevelopment = process.env.NODE_ENV === "development"
 
   useEffect(() => {
     if (locationData.location && locationData.category) {
@@ -200,8 +234,15 @@ export default function LocationPage({ params }: LocationPageProps) {
       const messGroupsData = data.messGroups || []
       console.log("Frontend: Received mess groups:", messGroupsData.length)
 
-      setMessGroups(messGroupsData)
-      setFilteredMesses(messGroupsData)
+      // Process amenities for each mess group
+      const processedMessGroups = messGroupsData.map((group: any) => ({
+        ...group,
+        amenities: Array.isArray(group.amenities) ? group.amenities : [],
+        images: Array.isArray(group.images) ? group.images : [],
+      }))
+
+      setMessGroups(processedMessGroups)
+      setFilteredMesses(processedMessGroups)
       setRetryCount(0) // Reset retry count on success
     } catch (error: any) {
       console.error("Frontend: Error fetching mess groups:", error)
@@ -368,7 +409,7 @@ export default function LocationPage({ params }: LocationPageProps) {
         )}
 
         {/* Debug Info (development only) */}
-        {process.env.NODE_ENV === "development" && (
+        {isDevelopment && (
           <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
             <h3 className="font-medium text-blue-800 mb-2">Debug Info:</h3>
             <div className="text-sm text-blue-700 space-y-1">
@@ -581,7 +622,7 @@ export default function LocationPage({ params }: LocationPageProps) {
                   <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Search className="w-10 h-10 text-slate-400" />
                   </div>
-                  <h3 className="text-xl font-semibold text-slate-800 mb-2">No Results Found</h3>
+                  <h3 className="text-xl font-semibold text-slate-800 mb-4">No Results Found</h3>
                   <p className="text-slate-600 mb-6">
                     {hasFilters
                       ? "No mess services match your current price criteria. Try adjusting your filters."
