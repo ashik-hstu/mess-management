@@ -5,7 +5,7 @@ import { Home, Users, List, Menu, X } from "lucide-react"
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: Home },
-//   { label: "Mess Groups", href: "/admin/mess-groups", icon: List },
+  { label: "Bookings", href: "/admin/bookings", icon: List },
   { label: "Users", href: "/admin/users", icon: Users },
 ]
 

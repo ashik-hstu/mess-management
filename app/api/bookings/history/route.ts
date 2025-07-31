@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserOrders } from '@/lib/db';
+import { getUserOrders, getAllBookings } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
   try {
@@ -11,7 +11,18 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
-    const orders = await getUserOrders(parseInt(user_id));
+    let orders;
+    if (user_id === 'all') {
+      // Admin: fetch all bookings
+      orders = await getAllBookings();
+    } else {
+      // User: fetch only their bookings
+      const parsedId = parseInt(user_id);
+      if (isNaN(parsedId)) {
+        return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
+      }
+      orders = await getUserOrders(parsedId);
+    }
 
     return NextResponse.json({
       success: true,

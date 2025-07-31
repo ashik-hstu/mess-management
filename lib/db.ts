@@ -1,3 +1,29 @@
+// Get all bookings (admin)
+export async function getAllBookings() {
+  try {
+    const result = await sql`
+      SELECT 
+        o.*,
+        mg.name as mess_name,
+        mg.location,
+        mg.category,
+        mg.address,
+        t.amount,
+        t.currency,
+        t.status as transaction_status,
+        t.payment_method,
+        t.created_at as transaction_date
+      FROM orders o
+      LEFT JOIN mess_groups mg ON o.mess_group_id = mg.id
+      LEFT JOIN transactions t ON o.id = t.order_id
+      ORDER BY o.created_at DESC
+    `;
+    return result;
+  } catch (error) {
+    console.error("Error fetching all bookings:", error);
+    throw error;
+  }
+}
 // Helper function to get all users (admin only)
 export async function getAllUsers() {
   try {
