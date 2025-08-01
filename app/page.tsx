@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus, Home, LogOut } from "lucide-react"
+import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus, Home, LogOut, User, Code } from "lucide-react"
 import { OnlineStatus } from "@/components/online-status"
 import { NotificationPermission } from "@/components/notification-permission"
 import { logout } from "@/lib/auth-utils"
@@ -473,22 +473,17 @@ export default function HomePage() {
 								Connecting students with verified mess owners since 2025.
 							</p>
 							<div className="flex space-x-4">
-								<Button
-									variant="outline"
-									size="sm"
-									className="border-slate-600 text-slate-400 hover:text-white hover:border-white bg-transparent"
-								>
-									<Phone className="w-4 h-4 mr-2" />
-									Contact
-								</Button>
-								<Button
-									variant="outline"
-									size="sm"
-									className="border-slate-600 text-slate-400 hover:text-white hover:border-white bg-transparent"
-								>
-									<Mail className="w-4 h-4 mr-2" />
-									Email
-								</Button>
+		
+								<Link href="/developer">
+									<Button
+										variant="outline"
+										size="sm"
+										className="group border-2 border-orange-500/30 text-orange-400 hover:text-white hover:border-orange-400 hover:bg-gradient-to-r hover:from-orange-600 hover:to-red-600 bg-transparent transition-all duration-300 shadow-lg hover:shadow-xl"
+									>
+										<Code className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+										Meet Developer
+									</Button>
+								</Link>
 							</div>
 						</div>
 
