@@ -116,9 +116,9 @@ const messData = {
 }
 
 interface LocationPageProps {
-  params: {
+  params: Promise<{
     slug: string
-  }
+  }>
 }
 
 interface MessGroup {
@@ -171,8 +171,9 @@ const amenityIcons: { [key: string]: any } = {
 }
 
 import * as React from "react"
-export default function LocationPage({ params }: LocationPageProps) {
-  const { slug } = params
+
+// Client component for the main page logic
+function LocationPageClient({ slug }: { slug: string }) {
   const [singlePriceFilter, setSinglePriceFilter] = useState("")
   const [doublePriceFilter, setDoublePriceFilter] = useState("")
   const [messGroups, setMessGroups] = useState<MessGroup[]>([])
@@ -744,4 +745,10 @@ export default function LocationPage({ params }: LocationPageProps) {
       </footer>
     </div>
   )
+}
+
+// Server component wrapper
+export default async function LocationPage({ params }: LocationPageProps) {
+  const { slug } = await params
+  return <LocationPageClient slug={slug} />
 }
