@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus, Home } from "lucide-react"
+import { OnlineStatus } from "@/components/online-status"
+import { NotificationPermission } from "@/components/notification-permission"
 
 const locations = [
 	{
@@ -207,6 +209,7 @@ export default function HomePage() {
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+			<OnlineStatus />
 			{/* Navigation */}
 			<nav className="bg-white/80 backdrop-blur-sm border-b border-white/20 sticky top-0 z-50">
 				<div className="container mx-auto px-4 py-4">
@@ -560,6 +563,7 @@ export default function HomePage() {
 					</div>
 				</div>
 			</footer>
+			<NotificationPermission />
 		</div>
 	)
 }

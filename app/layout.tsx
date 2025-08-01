@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { GeistSans } from 'geist/font/sans'
 import { GeistMono } from 'geist/font/mono'
+import { ServiceWorkerRegistration } from '@/components/service-worker-registration'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -32,7 +33,7 @@ export const metadata: Metadata = {
     siteName: 'HSTU Mess Finder',
     images: [
       {
-        url: '/placeholder-logo.png',
+        url: '/icon-512x512.png',
         width: 512,
         height: 512,
         alt: 'HSTU Mess Finder Logo',
@@ -43,18 +44,18 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'HSTU Mess Finder',
     description: 'Find and manage mess accommodations near HSTU campus.',
-    images: ['/placeholder-logo.png'],
+    images: ['/icon-512x512.png'],
   },
   icons: {
-    icon: '/placeholder-logo.png',
-    shortcut: '/placeholder-logo.png',
-    apple: '/placeholder-logo.png',
+    icon: '/icon-32x32.png',
+    shortcut: '/icon-16x16.png',
+    apple: '/icon-192x192.png',
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'HSTU Mess Finder',
-    startupImage: '/placeholder-logo.png',
+    startupImage: '/icon-512x512.png',
   },
 }
 
@@ -85,7 +86,10 @@ html {
 }
         `}</style>
       </head>
-      <body>{children}</body>
+      <body>
+        <ServiceWorkerRegistration />
+        {children}
+      </body>
     </html>
   )
 }
