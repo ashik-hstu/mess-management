@@ -7,9 +7,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus, Home } from "lucide-react"
+import { MapPin, Users, Phone, Mail, Building2, ArrowRight, CheckCircle, Shield, Clock, Heart, DownloadCloud, Menu, X, UserPlus, Home, LogOut } from "lucide-react"
 import { OnlineStatus } from "@/components/online-status"
 import { NotificationPermission } from "@/components/notification-permission"
+import { logout } from "@/lib/auth-utils"
 
 const locations = [
 	{
@@ -248,6 +249,14 @@ export default function HomePage() {
 													</Button>
 												</Link>
 											)}
+											<Button 
+												variant="ghost" 
+												className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
+												onClick={logout}
+											>
+												<LogOut className="w-4 h-4 mr-2" />
+												Logout
+											</Button>
 										</div>
 									)}
 								</div>

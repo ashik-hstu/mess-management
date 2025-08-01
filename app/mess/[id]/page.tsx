@@ -25,7 +25,9 @@ import {
   AlertCircle,
   Menu,
   X,
+  LogOut,
 } from "lucide-react"
+import { logout } from "@/lib/auth-utils"
 
 interface MessGroup {
   id: number
@@ -416,6 +418,14 @@ export default function MessDetailPage() {
                           </Button>
                         </Link>
                       )}
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
+                        onClick={logout}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout
+                      </Button>
                     </div>
                   )}
                 </div>

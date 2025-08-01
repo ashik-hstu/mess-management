@@ -1,7 +1,8 @@
 "use client"
 import React, { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Home, Users, List, Menu, X } from "lucide-react"
+import { Home, Users, List, Menu, X, LogOut } from "lucide-react"
+import { logout } from "@/lib/auth-utils"
 
 const navItems = [
   { label: "Dashboard", href: "/admin/dashboard", icon: Home },
@@ -97,6 +98,16 @@ function AdminSidebar() {
               <span className={`text-slate-800 font-medium text-base ${open || typeof window !== "undefined" && window.innerWidth >= 640 ? "inline" : "hidden sm:inline"}`}>{label}</span>
             </button>
           ))}
+          {/* Logout button */}
+          <button
+            onClick={logout}
+            className={`flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-red-50 transition-colors w-full mt-auto mb-4
+              ${open || typeof window !== "undefined" && window.innerWidth >= 640 ? "justify-start" : "justify-center"}`}
+            title="Logout"
+          >
+            <LogOut className="w-6 h-6 text-red-600" />
+            <span className={`text-red-600 font-medium text-base ${open || typeof window !== "undefined" && window.innerWidth >= 640 ? "inline" : "hidden sm:inline"}`}>Logout</span>
+          </button>
         </nav>
       </aside>
     </>

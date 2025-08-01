@@ -29,7 +29,9 @@ import {
   Shield,
   Zap,
   Menu,
+  LogOut,
 } from "lucide-react"
+import { logout } from "@/lib/auth-utils"
   // Responsive mobile menu for location page
   function MobileMenu() {
     const [open, setOpen] = useState(false)
@@ -396,6 +398,14 @@ export default function LocationPage({ params }: LocationPageProps) {
                           </Button>
                         </Link>
                       )}
+                      <Button 
+                        variant="ghost" 
+                        className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50" 
+                        onClick={logout}
+                      >
+                        <LogOut className="w-4 h-4 mr-2" />
+                        Logout
+                      </Button>
                     </div>
                   )}
                 </div>
