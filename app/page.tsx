@@ -474,7 +474,7 @@ export default function HomePage() {
 							</p>
 							<div className="flex space-x-4">
 		
-								<Link href="/developer">
+								{/* <Link href="/developer">
 									<Button
 										variant="outline"
 										size="sm"
@@ -483,7 +483,7 @@ export default function HomePage() {
 										<Code className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform duration-300" />
 										Meet Developer
 									</Button>
-								</Link>
+								</Link> */}
 							</div>
 						</div>
 
