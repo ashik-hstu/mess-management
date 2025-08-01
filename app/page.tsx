@@ -101,6 +101,71 @@ type BeforeInstallPromptEvent = Event & {
 	userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
+// PWA Install Hook
+function usePWAInstall() {
+	const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+	const [showInstall, setShowInstall] = useState(false)
+	const [isInstalled, setIsInstalled] = useState(false)
+
+	useEffect(() => {
+		if (typeof window === "undefined") return
+
+		// Check if app is already installed
+		const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+		const isInWebAppiOS = (window.navigator as any).standalone === true
+		const isInWebAppChrome = window.matchMedia('(display-mode: standalone)').matches
+		
+		if (isStandalone || isInWebAppiOS || isInWebAppChrome) {
+			setIsInstalled(true)
+			return
+		}
+
+		// Listen for install prompt
+		const handler = (e: Event) => {
+			e.preventDefault()
+			setDeferredPrompt(e as BeforeInstallPromptEvent)
+			setShowInstall(true)
+		}
+
+		// Listen for successful install
+		const appInstalledHandler = () => {
+			setIsInstalled(true)
+			setShowInstall(false)
+			setDeferredPrompt(null)
+		}
+
+		window.addEventListener("beforeinstallprompt", handler)
+		window.addEventListener("appinstalled", appInstalledHandler)
+
+		return () => {
+			window.removeEventListener("beforeinstallprompt", handler)
+			window.removeEventListener("appinstalled", appInstalledHandler)
+		}
+	}, [])
+
+	const handleInstallClick = async () => {
+		if (!deferredPrompt) return
+		
+		try {
+			await deferredPrompt.prompt()
+			const { outcome } = await deferredPrompt.userChoice
+			
+			if (outcome === "accepted") {
+				setShowInstall(false)
+				setDeferredPrompt(null)
+			}
+		} catch (error) {
+			console.error("Error during PWA install:", error)
+		}
+	}
+
+	return {
+		showInstall,
+		isInstalled,
+		handleInstallClick
+	}
+}
+
 // Simple mobile menu for homepage
 function MobileMenu() {
 	const [open, setOpen] = useState(false)
@@ -129,22 +194,9 @@ function MobileMenu() {
 
 // Main page component
 export default function HomePage() {
-	const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-	const [showInstall, setShowInstall] = useState(false)
+	const { showInstall, isInstalled, handleInstallClick } = usePWAInstall()
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 	const [user, setUser] = useState<{ role: string } | null>(null);
-
-	useEffect(() => {
-		if (typeof window === "undefined") return
-		// Listen for install prompt only; service worker is auto-registered by @ducanh2912/next-pwa
-		const handler = (e: Event) => {
-			e.preventDefault()
-			setDeferredPrompt(e as BeforeInstallPromptEvent)
-			setShowInstall(true)
-		}
-		window.addEventListener("beforeinstallprompt", handler)
-		return () => window.removeEventListener("beforeinstallprompt", handler)
-	}, [])
 
 	useEffect(() => {
 		if (typeof window !== "undefined") {
@@ -152,13 +204,6 @@ export default function HomePage() {
 			setUser(user ? JSON.parse(user) : null);
 		}
 	}, []);
-
-	const handleInstallClick = async () => {
-		if (!deferredPrompt) return
-		await deferredPrompt.prompt()
-		const { outcome } = await deferredPrompt.userChoice
-		if (outcome === "accepted") setShowInstall(false)
-	}
 
 	return (
 		<div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
@@ -253,12 +298,17 @@ export default function HomePage() {
 						<div className="max-w-2xl mx-auto bg-white/80 rounded-xl shadow-lg p-6 border border-orange-100 mb-4 flex flex-col items-center">
 							<div className="flex items-center gap-3 mb-2">
 								<DownloadCloud className="w-8 h-8 text-orange-600" />
-								<span className="text-xl font-semibold text-slate-800">Install as App</span>
+								<span className="text-xl font-semibold text-slate-800">
+									{isInstalled ? "App Installed!" : "Install as App"}
+								</span>
 							</div>
 							<p className="text-slate-600 mb-4 text-center">
-								Enjoy lightning-fast access, offline support, and a native app experience. Install HSTU Mess Finder on your device for the best experience!
+								{isInstalled 
+									? "You're using the installed app! Enjoy lightning-fast access and offline support."
+									: "Enjoy lightning-fast access, offline support, and a native app experience. Install HSTU Mess Finder on your device for the best experience!"
+								}
 							</p>
-							{showInstall && (
+							{showInstall && !isInstalled && (
 								<Button
 									size="lg"
 									className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-8 py-4 text-lg shadow-xl hover:shadow-2xl transition-all duration-300"
@@ -267,8 +317,21 @@ export default function HomePage() {
 									<DownloadCloud className="w-5 h-5 mr-2" /> Install App
 								</Button>
 							)}
-							{!showInstall && (
-								<span className="text-sm text-slate-500">Already installed or not supported on this device.</span>
+							{!showInstall && !isInstalled && (
+								<div className="text-center">
+									<span className="text-sm text-slate-500 block mb-2">
+										Installation not available on this device/browser.
+									</span>
+									<p className="text-xs text-slate-400">
+										For the best experience, try using Chrome, Edge, or Safari on Android/iOS.
+									</p>
+								</div>
+							)}
+							{isInstalled && (
+								<div className="flex items-center text-green-600">
+									<CheckCircle className="w-5 h-5 mr-2" />
+									<span className="font-medium">Ready to use offline!</span>
+								</div>
 							)}
 						</div>
 					</div>

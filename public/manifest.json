@@ -6,16 +6,38 @@
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#ea580c",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["education", "utilities"],
   "icons": [
     {
-      "src": "/images/placeholder-logo.png",
+      "src": "/placeholder-logo.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
     },
     {
-      "src": "/images/placeholder-logo.png",
+      "src": "/placeholder-logo.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Locations",
+      "short_name": "Browse",
+      "description": "Browse all mess locations",
+      "url": "/",
+      "icons": [{ "src": "/placeholder-logo.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Login",
+      "short_name": "Login",
+      "description": "Login to your account",
+      "url": "/owner/login",
+      "icons": [{ "src": "/placeholder-logo.png", "sizes": "96x96" }]
     }
   ]
 }
