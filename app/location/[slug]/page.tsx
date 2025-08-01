@@ -183,6 +183,8 @@ function LocationPageClient({ slug }: { slug: string }) {
   const [error, setError] = useState("")
   const [retryCount, setRetryCount] = useState(0)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [ratingLoading, setRatingLoading] = useState<{[key: number]: boolean}>({})
+  const [ratingMessages, setRatingMessages] = useState<{[key: number]: {type: 'success' | 'error', message: string}}>({})
 
   const locationData = messData[slug as keyof typeof messData] || {
     title: "Mess Accommodation",
@@ -646,22 +648,47 @@ function LocationPageClient({ slug }: { slug: string }) {
                                     <button
                                       key={i}
                                       type="button"
-                                      aria-label={`Set rating to ${i + 1}`}
-                                      className={`w-4 h-4 focus:outline-none ${
+                                      aria-label={`Rate ${mess.name} ${i + 1} out of 5 stars`}
+                                      className={`w-4 h-4 focus:outline-none transition-colors ${
                                         i < Math.round(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
-                                      }`}
+                                      } hover:text-yellow-500`}
+                                      disabled={ratingLoading[mess.id] || false}
                                       onClick={async () => {
+                                        setRatingLoading(prev => ({ ...prev, [mess.id]: true }))
+                                        setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'success', message: '' } }))
                                         try {
                                           const res = await fetch(`/api/mess-groups/${mess.id}/rating`, {
                                             method: "PATCH",
                                             headers: { "Content-Type": "application/json" },
                                             body: JSON.stringify({ rating: i + 1 }),
                                           })
-                                          if (!res.ok) throw new Error("Failed to update rating")
+                                          const data = await res.json()
+                                          if (!res.ok) throw new Error(data.error || "Failed to update rating")
+                                          
                                           setFilteredMesses((prev) => prev.map((m) => m.id === mess.id ? { ...m, rating: i + 1 } : m))
                                           setMessGroups((prev) => prev.map((m) => m.id === mess.id ? { ...m, rating: i + 1 } : m))
-                                        } catch (err) {
-                                          alert("Failed to update rating. Please try again.")
+                                          
+                                          setRatingMessages(prev => ({ 
+                                            ...prev, 
+                                            [mess.id]: { type: 'success', message: 'Rating updated successfully!' }
+                                          }))
+                                          
+                                          // Clear success message after 3 seconds
+                                          setTimeout(() => {
+                                            setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'success', message: '' } }))
+                                          }, 3000)
+                                        } catch (err: any) {
+                                          setRatingMessages(prev => ({ 
+                                            ...prev, 
+                                            [mess.id]: { type: 'error', message: err.message || 'Failed to update rating' }
+                                          }))
+                                          
+                                          // Clear error message after 5 seconds
+                                          setTimeout(() => {
+                                            setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'error', message: '' } }))
+                                          }, 5000)
+                                        } finally {
+                                          setRatingLoading(prev => ({ ...prev, [mess.id]: false }))
                                         }
                                       }}
                                     >
@@ -671,6 +698,24 @@ function LocationPageClient({ slug }: { slug: string }) {
                                 </div>
                                 <span className="text-sm text-slate-600 ml-1">{mess.rating || 0}</span>
                               </div>
+                              
+                              {/* Rating feedback messages */}
+                              {ratingMessages[mess.id]?.message && (
+                                <div className={`mt-1 text-xs px-2 py-1 rounded ${
+                                  ratingMessages[mess.id].type === 'success' 
+                                    ? 'bg-green-100 text-green-700' 
+                                    : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {ratingMessages[mess.id].message}
+                                </div>
+                              )}
+                              
+                              {ratingLoading[mess.id] && (
+                                <div className="mt-1 text-xs text-slate-500 flex items-center justify-center">
+                                  <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                  Updating...
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-center border-l">

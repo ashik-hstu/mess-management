@@ -112,6 +112,7 @@ export default function MessDetailPage() {
   const [userRating, setUserRating] = useState<number>(0);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [ratingError, setRatingError] = useState("");
+  const [ratingSuccess, setRatingSuccess] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [availableSeats, setAvailableSeats] = useState<any>(null);
   const [bookingLoading, setBookingLoading] = useState<{single: boolean, double: boolean}>({
@@ -221,15 +222,15 @@ export default function MessDetailPage() {
     );
   };
 
-  const handleStarClick = (star: number) => {
-    setUserRating(star)
-  }
-
   const handleRatingSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!userRating) return
+    if (!userRating) {
+      setRatingError("Please select a rating")
+      return
+    }
     setRatingLoading(true)
     setRatingError("")
+    setRatingSuccess("")
     try {
       const res = await fetch(`/api/mess-groups/${id}/rating`, {
         method: "PATCH",
@@ -239,6 +240,8 @@ export default function MessDetailPage() {
       const data = await res.json()
       if (!data.success) throw new Error(data.error || "Failed to update rating")
       setMessGroup((prev) => prev ? { ...prev, rating: userRating } : prev)
+      setRatingSuccess("Thank you! Your rating has been submitted successfully.")
+      setUserRating(0) // Reset user rating after successful submission
     } catch (err: any) {
       setRatingError(err.message || "Failed to update rating")
     } finally {
@@ -642,30 +645,94 @@ export default function MessDetailPage() {
             {/* Rating */}
             <Card className="border-0 shadow-xl">
               <CardHeader>
-                <CardTitle className="text-xl">Rating</CardTitle>
+                <CardTitle className="text-xl">Rate This Mess</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center mb-4">
-                  <div className="text-4xl font-bold text-slate-800 mr-3">{messGroup.rating}</div>
-                  <div className="flex">
+                  <div className="text-4xl font-bold text-slate-800 mr-3">{messGroup.rating || 0}</div>
+                  <div>
+                    <div className="flex mb-1">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-6 h-6 ${
+                            i < Math.floor(messGroup.rating || 0) ? "text-yellow-400 fill-current" : "text-slate-300"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <p className="text-sm text-slate-600">Current rating</p>
+                  </div>
+                </div>
+                
+                <div className="border-t pt-4">
+                  <h4 className="font-medium text-slate-800 mb-3">Submit Your Rating</h4>
+                  <div className="flex items-center mb-4">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-6 h-6 cursor-pointer ${
-                          i < (userRating || Math.floor(messGroup.rating)) ? "text-yellow-400 fill-current" : "text-slate-300"
+                        className={`w-8 h-8 cursor-pointer transition-colors ${
+                          i < userRating ? "text-yellow-400 fill-current hover:text-yellow-500" : "text-slate-300 hover:text-slate-400"
                         }`}
-                        onClick={() => handleStarClick(i + 1)}
+                        onClick={() => setUserRating(i + 1)}
                       />
                     ))}
+                    {userRating > 0 && (
+                      <span className="ml-2 text-sm text-slate-600">
+                        {userRating} out of 5 stars
+                      </span>
+                    )}
                   </div>
+                  
+                  {ratingSuccess && (
+                    <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-700 text-sm">{ratingSuccess}</p>
+                    </div>
+                  )}
+                  
+                  {ratingError && (
+                    <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-700 text-sm">{ratingError}</p>
+                    </div>
+                  )}
+                  
+                  <form onSubmit={handleRatingSubmit} className="flex items-center gap-2">
+                    <Button 
+                      type="submit" 
+                      size="sm" 
+                      disabled={ratingLoading || !userRating}
+                      className="bg-orange-600 hover:bg-orange-700"
+                    >
+                      {ratingLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        'Submit Rating'
+                      )}
+                    </Button>
+                    {userRating > 0 && (
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          setUserRating(0)
+                          setRatingError("")
+                          setRatingSuccess("")
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </form>
                 </div>
-                <form onSubmit={handleRatingSubmit} className="flex items-center gap-2 mb-2">
-                  <Button type="submit" size="sm" disabled={ratingLoading || !userRating}>
-                    {ratingLoading ? "Saving..." : "Submit Rating"}
-                  </Button>
-                  {ratingError && <span className="text-red-600 text-sm">{ratingError}</span>}
-                </form>
-                <p className="text-slate-600">Based on student reviews</p>
+                
+                <Separator className="my-4" />
+                <p className="text-slate-600 text-sm">
+                  Help other students by sharing your experience with this mess.
+                </p>
               </CardContent>
             </Card>
 

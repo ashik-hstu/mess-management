@@ -86,6 +86,8 @@ export default function AdminDashboard() {
   const [messGroups, setMessGroups] = useState<MessGroup[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
+  const [ratingLoading, setRatingLoading] = useState<{[key: number]: boolean}>({})
+  const [ratingMessages, setRatingMessages] = useState<{[key: number]: {type: 'success' | 'error', message: string}}>({})
 
   // Edit modal state and handlers
   const [editOpen, setEditOpen] = useState(false)
@@ -336,21 +338,46 @@ export default function AdminDashboard() {
                             <button
                               key={i}
                               type="button"
-                              aria-label={`Set rating to ${i + 1}`}
-                              className={`w-4 h-4 focus:outline-none ${
+                              aria-label={`Rate ${mess.name} ${i + 1} out of 5 stars`}
+                              className={`w-4 h-4 focus:outline-none transition-colors ${
                                 i < Math.round(mess.rating || 0) ? "text-yellow-400" : "text-slate-300"
-                              }`}
+                              } hover:text-yellow-500`}
+                              disabled={ratingLoading[mess.id] || false}
                               onClick={async () => {
+                                setRatingLoading(prev => ({ ...prev, [mess.id]: true }))
+                                setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'success', message: '' } }))
                                 try {
                                   const res = await fetch(`/api/mess-groups/${mess.id}/rating`, {
                                     method: "PATCH",
                                     headers: { "Content-Type": "application/json" },
                                     body: JSON.stringify({ rating: i + 1 }),
                                   })
-                                  if (!res.ok) throw new Error("Failed to update rating")
+                                  const data = await res.json()
+                                  if (!res.ok) throw new Error(data.error || "Failed to update rating")
+                                  
                                   setMessGroups((prev) => prev.map((m) => m.id === mess.id ? { ...m, rating: i + 1 } : m))
-                                } catch (err) {
-                                  alert("Failed to update rating. Please try again.")
+                                  
+                                  setRatingMessages(prev => ({ 
+                                    ...prev, 
+                                    [mess.id]: { type: 'success', message: 'Rating updated!' }
+                                  }))
+                                  
+                                  // Clear success message after 2 seconds
+                                  setTimeout(() => {
+                                    setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'success', message: '' } }))
+                                  }, 2000)
+                                } catch (err: any) {
+                                  setRatingMessages(prev => ({ 
+                                    ...prev, 
+                                    [mess.id]: { type: 'error', message: err.message || 'Failed to update rating' }
+                                  }))
+                                  
+                                  // Clear error message after 3 seconds
+                                  setTimeout(() => {
+                                    setRatingMessages(prev => ({ ...prev, [mess.id]: { type: 'error', message: '' } }))
+                                  }, 3000)
+                                } finally {
+                                  setRatingLoading(prev => ({ ...prev, [mess.id]: false }))
                                 }
                               }}
                             >
@@ -358,7 +385,23 @@ export default function AdminDashboard() {
                             </button>
                           ))}
                           <span className="text-xs text-slate-600 ml-1">{mess.rating || 0}</span>
+                          
+                          {/* Loading indicator */}
+                          {ratingLoading[mess.id] && (
+                            <Loader2 className="w-3 h-3 ml-2 animate-spin text-orange-600" />
+                          )}
                         </div>
+                        
+                        {/* Rating feedback messages */}
+                        {ratingMessages[mess.id]?.message && (
+                          <div className={`mt-1 text-xs px-2 py-1 rounded ${
+                            ratingMessages[mess.id].type === 'success' 
+                              ? 'bg-green-100 text-green-700' 
+                              : 'bg-red-100 text-red-700'
+                          }`}>
+                            {ratingMessages[mess.id].message}
+                          </div>
+                        )}
                         <Badge variant={mess.is_active ? "default" : "secondary"}>
                           {mess.is_active ? "Active" : "Inactive"}
                         </Badge>
