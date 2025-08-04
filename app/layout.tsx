@@ -11,9 +11,9 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   keywords: ['HSTU', 'mess', 'accommodation', 'students', 'hostel', 'bangladesh'],
   authors: [
-    { name: 'Ashik Hentai' },
+    { name: 'Ashikul Islam' },
   ],
-  creator: 'Ashik Hentai',
+  creator: 'Ashikul Islam',
   publisher: 'HSTU Mess Finder',
   formatDetection: {
     email: false,
