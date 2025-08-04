@@ -1,5 +1,6 @@
 
 ## 🚀 Project Overview
+### By ASHIK 
 
 HSTU Mess Finder is a full-stack web application for managing and discovering student mess accommodations. It allows mess owners to list their properties and students to search, filter, and view available messes by location and category.
 
