@@ -218,18 +218,21 @@ export async function getAvailableSeats(messGroupId: number) {
 
 // Update mess group available seats (decrement when booking confirmed)
 export async function updateMessSeats(messGroupId: number, roomType: string, increment: boolean = false) {
+
+  console.log("Cancel Update Seat")
   try {
     const column = roomType === 'single' ? 'single_seats' : 'double_seats'
     const operator = increment ? '+' : '-'
     
-    const result = await sql`
-      UPDATE mess_groups
-      SET ${sql.unsafe(column)} = ${sql.unsafe(column)} ${sql.unsafe(operator)} 1
-      WHERE id = ${messGroupId}
-        AND ${sql.unsafe(column)} ${sql.unsafe(increment ? '>= 0' : '> 0')}
-      RETURNING *
-    `
-    return result[0] || null
+    // const result = await sql`
+    //   UPDATE mess_groups
+    //   SET ${sql.unsafe(column)} = ${sql.unsafe(column)} ${sql.unsafe(operator)} 1
+    //   WHERE id = ${messGroupId}
+    //     AND ${sql.unsafe(column)} ${sql.unsafe(increment ? '>= 0' : '> 0')}
+    //   RETURNING *
+    // `
+    // return result[0] || null
+    return {};
   } catch (error) {
     console.error("Error updating mess seats:", error)
     throw error
